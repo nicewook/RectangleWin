@@ -1,5 +1,9 @@
 # RectangleWin
 
+> **Fork Information:** This project is a fork of [ahmetb/RectangleWin](https://github.com/ahmetb/RectangleWin).
+>
+> **License:** Licensed under the [Apache License 2.0](./LICENSE).
+
 A minimalistic Windows rewrite of macOS
 [Rectangle.app](https://rectangleapp.com)/[Spectacle.app](https://www.spectacleapp.com/).
 ([Why?](#why))
@@ -26,7 +30,7 @@ only using hotkeys:
 ## Keyboard Bindings
 
 - **Snap to edges** (left/right/top/bottom ½, ⅔, ⅓):
-  - <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd>
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd>
   - Press multiple times to alternate between ½, ⅔ and ⅓.
 
 - **Corner snapping**
@@ -37,8 +41,8 @@ only using hotkeys:
 
 - **Center window** on the display: <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd>
 
-- **Maximize window**: <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>
-  (Obsolete since Windows natively supports <kbd>Win</kbd>+<kbd>&uarr;</kbd>)
+- **Maximize window**: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Enter</kbd>
+  (Previously Win+Shift+F. Note: Windows natively supports <kbd>Win</kbd>+<kbd>&uarr;</kbd>)
 
 - **Always On Top (toggle)**: <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>A</kbd>
 
