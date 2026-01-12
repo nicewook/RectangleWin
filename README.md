@@ -60,7 +60,7 @@ are not offering enough hotkey support.
 
 ## Development (Install from source)
 
-With Go 1.17+ installed, clone this repository and run:
+With Go 1.25+ installed, clone this repository and run:
 
 ```sh
 go generate
