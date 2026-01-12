@@ -18,7 +18,7 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/getlantern/systray"
+	"fyne.io/systray"
 	"github.com/gonutz/w32/v2"
 )
 

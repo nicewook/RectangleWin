@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/getlantern/systray"
+	"fyne.io/systray"
 	"github.com/gonutz/w32/v2"
 
 	"github.com/ahmetb/RectangleWin/w32ex"
