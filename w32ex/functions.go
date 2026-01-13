@@ -66,3 +66,9 @@ func SetProcessDPIAware() bool {
 	r1, _, _ := user32.NewProc("SetProcessDPIAware").Call()
 	return r1 != 0
 }
+
+// IsZoomed - 창이 최대화 상태인지 확인
+func IsZoomed(hwnd w32.HWND) bool {
+	r1, _, _ := user32.NewProc("IsZoomed").Call(uintptr(hwnd))
+	return r1 != 0
+}
