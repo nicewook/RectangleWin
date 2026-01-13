@@ -658,10 +658,9 @@ grep -r "topTwoThirds\|bottomTwoThirds\|toggleAlwaysOnTop\|cycleFuncs" *.go
 
 # 3. 남아있는 함수 목록 확인 (snap.go)
 grep "^func " snap.go
-# 예상: leftHalf, rightHalf, topHalf, bottomHalf, maximize, center,
-#       topLeft, topRight, bottomLeft, bottomRight,
-#       leftThird, rightThird, leftTwoThirds, rightTwoThirds,
-#       makeSmaller, makeLarger
+# 예상: leftHalf, rightHalf, topHalf, bottomHalf,
+#       topLeftHalf, topRightHalf, bottomLeftHalf, bottomRightHalf,
+#       leftOneThirds, leftTwoThirds, rightOneThirds, rightTwoThirds
 ```
 
 #### PR 머지 조건

@@ -71,7 +71,7 @@ func main() {
 		{id: 22, mod: MOD_CONTROL | MOD_ALT, vk: 0x4A /*J*/, callback: simpleResize(bottomLeftHalf, "Bottom Left")},
 		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 0x4B /*K*/, callback: simpleResize(bottomRightHalf, "Bottom Right")},
 		// Maximize (CTRL+ALT+Enter)
-		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: 0x0D /*Enter*/, callback: func() {
+		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: func() {
 			fmt.Println("Hotkey: Maximize")
 			if err := maximize(); err != nil {
 				fmt.Printf("warn: maximize: %v\n", err)
