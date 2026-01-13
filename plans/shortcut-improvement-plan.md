@@ -885,7 +885,7 @@ Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Na
 - [x] 트레이 아이콘 정상 표시
 - [x] 모든 메뉴 동작 확인
 - [x] 시작 프로그램 등록/해제 동작 확인
-- [ ] 코드 리뷰 승인
+- [x] 코드 리뷰 승인
 
 ---
 
@@ -1002,7 +1002,7 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 | Phase 2 | 기본 기능 수정 | [x] 완료 | [#7](https://github.com/nicewook/RectangleWin/pull/7) |
 | Phase 3 | 단축키 재정의 | [x] 완료 | [#8](https://github.com/nicewook/RectangleWin/pull/8) |
 | Phase 4 | Multi-Display | [x] 완료 | [#10](https://github.com/nicewook/RectangleWin/pull/10) |
-| Phase 5 | 시스템 트레이 | [x] 테스트 완료 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
+| Phase 5 | 시스템 트레이 | [x] 완료 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
 | Phase 6 | 에러 처리 | [ ] 대기 | - |
 | Phase 7 | 최종 테스트 | [ ] 대기 | - |
 
