@@ -143,13 +143,18 @@ func abs32(x int32) int32 {
 // multiDisplaySnap handles snap with multi-display support
 // Returns: target monitor work area, snap function to use, whether to proceed
 func multiDisplaySnap(hwnd w32.HWND, pos SnapPosition, windowRect w32.RECT) (w32.RECT, resizeFunc, bool) {
-	info := snapPositions[pos]
+	info, exists := snapPositions[pos]
+	if !exists {
+		// Invalid SnapPosition - not configured for multi-display
+		return w32.RECT{}, nil, false
+	}
 
 	// Get current monitor
 	currentMon := w32.MonitorFromWindow(hwnd, w32.MONITOR_DEFAULTTONEAREST)
 	var monInfo w32.MONITORINFO
 	if !w32.GetMonitorInfo(currentMon, &monInfo) {
-		return monInfo.RcWork, info.snapFunc, true
+		// Failed to get monitor info - abort to prevent unexpected behavior
+		return w32.RECT{}, nil, false
 	}
 
 	// If no multi-display movement, just snap on current monitor
