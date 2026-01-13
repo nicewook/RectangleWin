@@ -31,6 +31,9 @@ import (
 	"github.com/ahmetb/RectangleWin/w32ex"
 )
 
+// savedStates - 스냅 전 창 상태 저장 (창당 1개, 메모리에만 저장)
+var savedStates = make(map[w32.HWND]w32.RECT)
+
 func main() {
 	runtime.LockOSThread() // since we bind hotkeys etc that need to dispatch their message here
 	if !w32ex.SetProcessDPIAware() {
@@ -118,15 +121,16 @@ func showMessageBox(text string) {
 
 type resizeFunc func(disp, cur w32.RECT) w32.RECT
 
-func center(disp, cur w32.RECT) w32.RECT {
-	// TODO find a way to round up divisions consistently as it causes multiple runs to shift by 1px
-	w := (disp.Width() - cur.Width()) / 2
-	h := (disp.Height() - cur.Height()) / 2
+// center - 창을 화면의 75% 크기로 리사이즈하고 중앙에 배치
+func center(disp, _ w32.RECT) w32.RECT {
+	width := disp.Width() * 3 / 4  // 75%
+	height := disp.Height() * 3 / 4 // 75%
 	return w32.RECT{
-		Left:   disp.Left + w,
-		Right:  disp.Left + w + cur.Width(),
-		Top:    disp.Top + h,
-		Bottom: disp.Top + h + cur.Height()}
+		Left:   disp.Left + (disp.Width()-width)/2,
+		Top:    disp.Top + (disp.Height()-height)/2,
+		Right:  disp.Left + (disp.Width()+width)/2,
+		Bottom: disp.Top + (disp.Height()+height)/2,
+	}
 }
 
 func resize(hwnd w32.HWND, f resizeFunc) (bool, error) {
@@ -176,6 +180,12 @@ func resize(hwnd w32.HWND, f resizeFunc) (bool, error) {
 		return false, nil
 	}
 
+	// 첫 스냅 시에만 현재 상태 저장 (저장된 상태가 없을 때만)
+	if _, exists := savedStates[hwnd]; !exists {
+		savedStates[hwnd] = *rect
+		fmt.Printf("> saved state for restore: %#v\n", *rect)
+	}
+
 	fmt.Printf("> resizing to: %#v (W:%d,H:%d)\n", newPos, newPos.Width(), newPos.Height())
 	if !w32.ShowWindow(hwnd, w32.SW_SHOWNORMAL) { // normalize window first if it's set to SW_SHOWMAXIMIZE (and therefore stays maximized)
 		return false, fmt.Errorf("failed to normalize window ShowWindow:%d", w32.GetLastError())
@@ -195,6 +205,44 @@ func maximize() error {
 	}
 	if !w32.ShowWindow(hwnd, w32.SW_MAXIMIZE) {
 		return fmt.Errorf("failed to ShowWindow:%d", w32.GetLastError())
+	}
+	return nil
+}
+
+// restore - 통합 복원 함수
+// 1. 최대화 상태 → SW_RESTORE
+// 2. 스냅 상태 → 저장된 원래 위치로 복원
+func restore() error {
+	hwnd := w32.GetForegroundWindow()
+	if !isZonableWindow(hwnd) {
+		return errors.New("foreground window is not zonable")
+	}
+
+	// 1. 최대화 상태 확인
+	if w32ex.IsZoomed(hwnd) {
+		fmt.Println("Restore: window is maximized, calling SW_RESTORE")
+		if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
+			return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
+		}
+		return nil
+	}
+
+	// 2. 저장된 상태가 있으면 복원
+	if state, ok := savedStates[hwnd]; ok {
+		fmt.Printf("Restore: restoring to saved state %#v\n", state)
+		if !w32.SetWindowPos(hwnd, 0, int(state.Left), int(state.Top),
+			int(state.Width()), int(state.Height()),
+			w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
+			return fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
+		}
+		delete(savedStates, hwnd)
+		return nil
+	}
+
+	// 3. 저장된 상태가 없으면 SW_RESTORE 시도 (최소화 등 다른 상태 복원)
+	fmt.Println("Restore: no saved state, calling SW_RESTORE")
+	if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
+		return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
 	}
 	return nil
 }

@@ -673,19 +673,19 @@ grep "^func " snap.go
 
 ---
 
-### Phase 2: 기본 기능 수정 [ ]
+### Phase 2: 기본 기능 수정 [x]
 
 **브랜치**: `feature/phase2-core-functions`
 **PR 제목**: `feat: Phase 2 - Center/Size/Restore 기능 구현`
 
 #### 작업 항목
-- [ ] center 함수를 75% 크기로 수정
-- [ ] makeSmaller 함수 해상도 비례(3%)로 수정
-- [ ] makeLarger 함수 해상도 비례(3%)로 수정
-- [ ] centerThird 함수 추가
-- [ ] savedStates 맵 추가 (스냅 전 상태 저장용)
-- [ ] resize 함수에 상태 저장 로직 추가 (첫 스냅 시에만)
-- [ ] restore 함수 구현 (통합 복원)
+- [x] center 함수를 75% 크기로 수정
+- [x] makeSmaller 함수 해상도 비례(3%)로 수정
+- [x] makeLarger 함수 해상도 비례(3%)로 수정
+- [x] centerThird 함수 추가
+- [x] savedStates 맵 추가 (스냅 전 상태 저장용)
+- [x] resize 함수에 상태 저장 로직 추가 (첫 스냅 시에만)
+- [x] restore 함수 구현 (통합 복원)
 
 #### 구현 확인 방법
 ```bash
@@ -710,7 +710,7 @@ grep "func centerThird\|func restore\|savedStates" *.go
 | 연속 스냅(LEFT→UP→RIGHT) → CTRL+ALT+BACKSPACE | 최초 스냅 전 위치로 복원 | [ ] |
 
 #### PR 머지 조건
-- [ ] 빌드 성공
+- [x] 빌드 성공
 - [ ] 모든 수동 테스트 통과
 - [ ] 코드 리뷰 승인
 
@@ -998,8 +998,8 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 
 | Phase | 설명 | 상태 | PR |
 |-------|------|------|-----|
-| Phase 1 | 코드 정리 | [x] PR 리뷰 중 | [#4](https://github.com/nicewook/RectangleWin/pull/4) |
-| Phase 2 | 기본 기능 수정 | [ ] 대기 | - |
+| Phase 1 | 코드 정리 | [x] 완료 | [#4](https://github.com/nicewook/RectangleWin/pull/4) |
+| Phase 2 | 기본 기능 수정 | [x] 진행 중 | - |
 | Phase 3 | 단축키 재정의 | [ ] 대기 | - |
 | Phase 4 | Multi-Display | [ ] 대기 | - |
 | Phase 5 | 시스템 트레이 | [ ] 대기 | - |
