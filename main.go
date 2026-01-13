@@ -123,7 +123,7 @@ type resizeFunc func(disp, cur w32.RECT) w32.RECT
 
 // center - 창을 화면의 75% 크기로 리사이즈하고 중앙에 배치
 func center(disp, _ w32.RECT) w32.RECT {
-	width := disp.Width() * 3 / 4  // 75%
+	width := disp.Width() * 3 / 4   // 75%
 	height := disp.Height() * 3 / 4 // 75%
 	return w32.RECT{
 		Left:   disp.Left + (disp.Width()-width)/2,
