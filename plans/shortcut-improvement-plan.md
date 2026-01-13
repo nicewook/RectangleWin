@@ -889,16 +889,18 @@ Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Na
 
 ---
 
-### Phase 6: 에러 처리 [ ]
+### Phase 6: 에러 처리 [x]
 
-**브랜치**: `feature/phase6-error-handling`
-**PR 제목**: `feat: Phase 6 - 단축키 충돌 처리`
+**브랜치**: 별도 브랜치 불필요 (기존 코드에 이미 구현됨)
+**PR 제목**: N/A
+
+> **Note**: Phase 6 기능은 main.go에 이미 구현되어 있음 (123-136번 줄)
 
 #### 작업 항목
-- [ ] 단축키 등록 실패 감지 로직 추가
-- [ ] 충돌 단축키 목록 수집
-- [ ] 메시지 박스 표시 구현
-- [ ] 충돌 외 단축키 정상 등록 보장
+- [x] 단축키 등록 실패 감지 로직 추가
+- [x] 충돌 단축키 목록 수집
+- [x] 메시지 박스 표시 구현
+- [x] 충돌 외 단축키 정상 등록 보장
 
 #### 구현 확인 방법
 ```bash
@@ -920,10 +922,10 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 4. 다른 단축키 동작 확인
 
 #### PR 머지 조건
-- [ ] 빌드 성공
-- [ ] 단축키 충돌 시 메시지 박스 정상 표시
-- [ ] 충돌 외 단축키 정상 동작
-- [ ] 코드 리뷰 승인
+- [x] 빌드 성공 (기존 코드에 포함)
+- [x] 단축키 충돌 시 메시지 박스 정상 표시
+- [x] 충돌 외 단축키 정상 동작
+- [x] 코드 리뷰 승인 (기존 PR에서 리뷰됨)
 
 ---
 
@@ -1002,8 +1004,8 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 | Phase 2 | 기본 기능 수정 | [x] 완료 | [#7](https://github.com/nicewook/RectangleWin/pull/7) |
 | Phase 3 | 단축키 재정의 | [x] 완료 | [#8](https://github.com/nicewook/RectangleWin/pull/8) |
 | Phase 4 | Multi-Display | [x] 완료 | [#10](https://github.com/nicewook/RectangleWin/pull/10) |
-| Phase 5 | 시스템 트레이 | [x] PR 리뷰 중 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
-| Phase 6 | 에러 처리 | [ ] 대기 | - |
+| Phase 5 | 시스템 트레이 | [x] 완료 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
+| Phase 6 | 에러 처리 | [x] 완료 (기존 구현) | N/A |
 | Phase 7 | 최종 테스트 | [ ] 대기 | - |
 
 ---
