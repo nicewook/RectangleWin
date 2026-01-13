@@ -859,16 +859,16 @@ grep "OpenKey\|SetStringValue\|DeleteValue" *.go
 **시스템 트레이 테스트**:
 | 테스트 항목 | 기대 결과 | 확인 |
 |-------------|-----------|------|
-| 프로그램 시작 | 콘솔 창 없이 시작, 트레이 아이콘 표시 | [ ] |
-| 트레이 아이콘 hover | "RectangleWin" 툴팁 표시 | [ ] |
-| 트레이 좌클릭 | 아무 동작 없음 | [ ] |
-| 트레이 우클릭 | 컨텍스트 메뉴 표시 | [ ] |
-| About 메뉴 클릭 | About 다이얼로그 표시 | [ ] |
-| 단축키 목록 클릭 | 단축키 목록 창 표시 | [ ] |
-| 단축키 목록 닫기 버튼 | 창 닫힘 | [ ] |
-| 시작 프로그램 토글 ON | 체크 표시, 레지스트리에 등록 | [ ] |
-| 시작 프로그램 토글 OFF | 체크 해제, 레지스트리에서 제거 | [ ] |
-| Exit 클릭 | 프로그램 종료, 트레이 아이콘 제거 | [ ] |
+| 프로그램 시작 | 콘솔 창 없이 시작, 트레이 아이콘 표시 | [x] |
+| 트레이 아이콘 hover | "RectangleWin" 툴팁 표시 | [x] |
+| 트레이 좌클릭 | 아무 동작 없음 | [x] |
+| 트레이 우클릭 | 컨텍스트 메뉴 표시 | [x] |
+| About 메뉴 클릭 | About 다이얼로그 표시 | [x] |
+| 단축키 목록 클릭 | 단축키 목록 창 표시 | [x] |
+| 단축키 목록 닫기 버튼 | 창 닫힘 | [x] |
+| 시작 프로그램 토글 ON | 체크 표시, 레지스트리에 등록 | [x] |
+| 시작 프로그램 토글 OFF | 체크 해제, 레지스트리에서 제거 | [x] |
+| Exit 클릭 | 프로그램 종료, 트레이 아이콘 제거 | [x] |
 
 **레지스트리 확인** (PowerShell):
 ```powershell
@@ -881,10 +881,10 @@ Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Na
 ```
 
 #### PR 머지 조건
-- [ ] GUI 빌드 성공 (콘솔 숨김)
-- [ ] 트레이 아이콘 정상 표시
-- [ ] 모든 메뉴 동작 확인
-- [ ] 시작 프로그램 등록/해제 동작 확인
+- [x] GUI 빌드 성공 (콘솔 숨김)
+- [x] 트레이 아이콘 정상 표시
+- [x] 모든 메뉴 동작 확인
+- [x] 시작 프로그램 등록/해제 동작 확인
 - [ ] 코드 리뷰 승인
 
 ---
@@ -1002,7 +1002,7 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 | Phase 2 | 기본 기능 수정 | [x] 완료 | [#7](https://github.com/nicewook/RectangleWin/pull/7) |
 | Phase 3 | 단축키 재정의 | [x] 완료 | [#8](https://github.com/nicewook/RectangleWin/pull/8) |
 | Phase 4 | Multi-Display | [x] 완료 | [#10](https://github.com/nicewook/RectangleWin/pull/10) |
-| Phase 5 | 시스템 트레이 | [x] PR 리뷰 중 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
+| Phase 5 | 시스템 트레이 | [x] 테스트 완료 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
 | Phase 6 | 에러 처리 | [ ] 대기 | - |
 | Phase 7 | 최종 테스트 | [ ] 대기 | - |
 
