@@ -24,6 +24,7 @@ import (
 	"os/signal"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"fyne.io/systray"
 	"github.com/gonutz/w32/v2"
@@ -62,24 +63,44 @@ func main() {
 		}
 	}
 
+	// Simple action helper - for maximize/restore
+	simpleAction := func(action func() error, name string) func() {
+		return func() {
+			fmt.Printf("Hotkey: %s\n", name)
+			if err := action(); err != nil {
+				fmt.Printf("warn: %s: %v\n", strings.ToLower(name), err)
+			}
+		}
+	}
+
 	hks := []HotKey{
-		// Halves (CTRL+ALT+Arrow)
+		// ===== Halves (ID: 1-4) =====
 		{id: 1, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_LEFT, callback: simpleResize(leftHalf, "Left Half")},
 		{id: 2, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RIGHT, callback: simpleResize(rightHalf, "Right Half")},
 		{id: 3, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_UP, callback: simpleResize(topHalf, "Top Half")},
 		{id: 4, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_DOWN, callback: simpleResize(bottomHalf, "Bottom Half")},
-		// Corners (CTRL+ALT+U/I/J/K)
-		{id: 20, mod: MOD_CONTROL | MOD_ALT, vk: 0x55 /*U*/, callback: simpleResize(topLeftHalf, "Top Left")},
-		{id: 21, mod: MOD_CONTROL | MOD_ALT, vk: 0x49 /*I*/, callback: simpleResize(topRightHalf, "Top Right")},
-		{id: 22, mod: MOD_CONTROL | MOD_ALT, vk: 0x4A /*J*/, callback: simpleResize(bottomLeftHalf, "Bottom Left")},
-		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 0x4B /*K*/, callback: simpleResize(bottomRightHalf, "Bottom Right")},
-		// Maximize (CTRL+ALT+Enter)
-		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: func() {
-			fmt.Println("Hotkey: Maximize")
-			if err := maximize(); err != nil {
-				fmt.Printf("warn: maximize: %v\n", err)
-			}
-		}},
+
+		// ===== Maximize / Center / Restore (ID: 10-12) =====
+		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: simpleAction(maximize, "Maximize")},
+		{id: 11, mod: MOD_CONTROL | MOD_ALT, vk: 'C', callback: simpleResize(center, "Center")},
+		{id: 12, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_BACK /*Backspace*/, callback: simpleAction(restore, "Restore")},
+
+		// ===== Corners (ID: 20-23) =====
+		{id: 20, mod: MOD_CONTROL | MOD_ALT, vk: 'U', callback: simpleResize(topLeftHalf, "Top Left")},
+		{id: 21, mod: MOD_CONTROL | MOD_ALT, vk: 'I', callback: simpleResize(topRightHalf, "Top Right")},
+		{id: 22, mod: MOD_CONTROL | MOD_ALT, vk: 'J', callback: simpleResize(bottomLeftHalf, "Bottom Left")},
+		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 'K', callback: simpleResize(bottomRightHalf, "Bottom Right")},
+
+		// ===== Thirds (ID: 30-34) =====
+		{id: 30, mod: MOD_CONTROL | MOD_ALT, vk: 'D', callback: simpleResize(leftOneThirds, "First Third")},
+		{id: 31, mod: MOD_CONTROL | MOD_ALT, vk: 'F', callback: simpleResize(centerThird, "Center Third")},
+		{id: 32, mod: MOD_CONTROL | MOD_ALT, vk: 'G', callback: simpleResize(rightOneThirds, "Last Third")},
+		{id: 33, mod: MOD_CONTROL | MOD_ALT, vk: 'E', callback: simpleResize(leftTwoThirds, "First Two Thirds")},
+		{id: 34, mod: MOD_CONTROL | MOD_ALT, vk: 'T', callback: simpleResize(rightTwoThirds, "Last Two Thirds")},
+
+		// ===== Size (ID: 40-41) =====
+		{id: 40, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_OEM_MINUS /*-*/, callback: simpleResize(makeSmaller, "Make Smaller")},
+		{id: 41, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_OEM_PLUS /*+*/, callback: simpleResize(makeLarger, "Make Larger")},
 	}
 
 	var failedHotKeys []HotKey
