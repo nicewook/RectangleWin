@@ -623,49 +623,388 @@ package main
 
 ## 10. 구현 순서
 
-### Phase 1: 코드 정리
-1. snap.go에서 사용하지 않는 함수들 삭제
-2. main.go에서 사이클 인프라 삭제
-3. toggleAlwaysOnTop 삭제
+> **진행 규칙**: 각 Phase는 PR을 생성하여 리뷰/승인 후 main에 머지합니다.
+> 다음 Phase는 이전 Phase PR이 머지된 후 시작합니다.
 
-### Phase 2: 기본 기능 수정
-1. center 함수를 75% 크기로 수정
-2. makeSmaller/makeLarger 함수 해상도 비례로 수정
-3. centerThird 함수 추가
-4. restore 함수 구현 (스냅 전 상태 저장/복원 포함)
-5. savedStates 맵 추가
-6. resize 함수에 상태 저장 로직 추가
+---
 
-### Phase 3: 단축키 재정의
-1. 기존 hks 슬라이스 삭제
-2. 새 hks 슬라이스 작성 (17개)
-3. 단축키 등록 코드 정리
+### Phase 1: 코드 정리 [x]
 
-### Phase 4: Multi-Display 구현
-1. multimon.go 파일 생성
-2. 모니터 열거 함수 구현
-3. 현재 모니터 판별 함수 구현
-4. 다음/이전 모니터 계산 함수 구현
-5. 에지 맞춤 변환 함수 구현
-6. 이동 지원 단축키에 Multi-Display 로직 적용
+**브랜치**: `feature/phase1-cleanup`
+**PR 제목**: `refactor: Phase 1 - 미사용 코드 정리`
 
-### Phase 5: 시스템 트레이 구현
-1. tray.go 파일 생성
-2. 트레이 아이콘 표시
-3. 컨텍스트 메뉴 구현
-4. 단축키 목록 창 구현
-5. 시작 프로그램 등록/해제 구현
-6. 빌드 스크립트에 -H=windowsgui 추가
+#### 작업 항목
+- [x] snap.go에서 사용하지 않는 함수들 삭제
+  - topTwoThirds, topOneThirds, bottomTwoThirds, bottomOneThirds
+  - topLeftTwoThirds, topLeftOneThirds, topRightTwoThirds, topRightOneThirds
+  - bottomLeftTwoThirds, bottomLeftOneThirds, bottomRightTwoThirds, bottomRightOneThirds
+- [x] main.go에서 사이클 인프라 삭제
+  - lastResized 변수
+  - edgeFuncs, edgeFuncTurn 변수
+  - cornerFuncs, cornerFuncTurn 변수
+  - cycleFuncs 클로저
+  - cycleEdgeFuncs, cycleCornerFuncs 변수
+- [x] toggleAlwaysOnTop 함수 삭제
+- [x] 관련 단축키 제거 (ALT+WIN+C, ALT+WIN+A, CTRL+ALT+WIN+Arrow)
 
-### Phase 6: 에러 처리
-1. 단축키 충돌 감지 로직 추가
-2. 메시지 박스 표시 구현
+#### 구현 확인 방법
+```bash
+# 1. 빌드 성공 확인
+GOOS=windows GOARCH=amd64 go build -o RectangleWin.exe .
 
-### Phase 7: 테스트 및 검증
-1. 기본 기능 테스트
-2. Multi-Display 테스트
-3. 트레이 기능 테스트
-4. 에러 처리 테스트
+# 2. 삭제된 함수가 없는지 확인
+grep -r "topTwoThirds\|bottomTwoThirds\|toggleAlwaysOnTop\|cycleFuncs" *.go
+# 결과: 없어야 함
+
+# 3. 남아있는 함수 목록 확인 (snap.go)
+grep "^func " snap.go
+# 예상: leftHalf, rightHalf, topHalf, bottomHalf,
+#       topLeftHalf, topRightHalf, bottomLeftHalf, bottomRightHalf,
+#       leftOneThirds, leftTwoThirds, rightOneThirds, rightTwoThirds
+```
+
+#### PR 머지 조건
+- [x] 빌드 성공 (에러 없음)
+- [x] 삭제 대상 코드가 모두 제거됨
+- [ ] 기존 기능 동작 확인 (수동 테스트)
+  - CTRL+ALT+Arrow (4방향) 동작
+  - CTRL+ALT+U/I/J/K 동작
+- [ ] 코드 리뷰 승인
+
+---
+
+### Phase 2: 기본 기능 수정 [ ]
+
+**브랜치**: `feature/phase2-core-functions`
+**PR 제목**: `feat: Phase 2 - Center/Size/Restore 기능 구현`
+
+#### 작업 항목
+- [ ] center 함수를 75% 크기로 수정
+- [ ] makeSmaller 함수 해상도 비례(3%)로 수정
+- [ ] makeLarger 함수 해상도 비례(3%)로 수정
+- [ ] centerThird 함수 추가
+- [ ] savedStates 맵 추가 (스냅 전 상태 저장용)
+- [ ] resize 함수에 상태 저장 로직 추가 (첫 스냅 시에만)
+- [ ] restore 함수 구현 (통합 복원)
+
+#### 구현 확인 방법
+```bash
+# 1. 빌드 성공 확인
+GOOS=windows GOARCH=amd64 go build -o RectangleWin.exe .
+
+# 2. 새 함수 존재 확인
+grep "func centerThird\|func restore\|savedStates" *.go
+# 결과: 모두 존재해야 함
+```
+
+**수동 테스트 체크리스트**:
+| 테스트 | 기대 결과 | 확인 |
+|--------|-----------|------|
+| CTRL+ALT+C | 창이 화면 75% 크기로 중앙 배치 | [ ] |
+| CTRL+ALT+- (5회 연속) | 창이 점점 작아짐 (해상도 비례) | [ ] |
+| CTRL+ALT++ (5회 연속) | 창이 점점 커짐 (해상도 비례) | [ ] |
+| CTRL+ALT+- (최소 크기 도달) | 100x100 이하로 줄어들지 않음 | [ ] |
+| CTRL+ALT+F | 창이 화면 중앙 1/3에 배치 | [ ] |
+| CTRL+ALT+ENTER → CTRL+ALT+BACKSPACE | 최대화 후 복원 | [ ] |
+| CTRL+ALT+LEFT → CTRL+ALT+BACKSPACE | 스냅 후 원래 위치로 복원 | [ ] |
+| 연속 스냅(LEFT→UP→RIGHT) → CTRL+ALT+BACKSPACE | 최초 스냅 전 위치로 복원 | [ ] |
+
+#### PR 머지 조건
+- [ ] 빌드 성공
+- [ ] 모든 수동 테스트 통과
+- [ ] 코드 리뷰 승인
+
+---
+
+### Phase 3: 단축키 재정의 [ ]
+
+**브랜치**: `feature/phase3-hotkeys`
+**PR 제목**: `feat: Phase 3 - 17개 단축키 재정의`
+
+#### 작업 항목
+- [ ] 기존 hks 슬라이스 삭제
+- [ ] 새 hks 슬라이스 작성 (17개)
+  - Halves: CTRL+ALT+LEFT/RIGHT/UP/DOWN (4개)
+  - Maximize/Center/Restore: CTRL+ALT+ENTER/C/BACKSPACE (3개)
+  - Corners: CTRL+ALT+U/I/J/K (4개)
+  - Thirds: CTRL+ALT+D/F/G/E/T (5개)
+  - Size: CTRL+ALT+-/+ (2개)
+- [ ] Hotkey ID 체계 적용 (섹션 8 참조)
+- [ ] 단축키 등록 코드 정리
+
+#### 구현 확인 방법
+```bash
+# 1. 빌드 성공 확인
+GOOS=windows GOARCH=amd64 go build -o RectangleWin.exe .
+
+# 2. 단축키 개수 확인
+grep -c "HotkeyInfo{" main.go
+# 결과: 17
+```
+
+**전체 단축키 동작 테스트**:
+| 카테고리 | 단축키 | 기능 | 확인 |
+|----------|--------|------|------|
+| Halves | CTRL+ALT+LEFT | Left Half | [ ] |
+| Halves | CTRL+ALT+RIGHT | Right Half | [ ] |
+| Halves | CTRL+ALT+UP | Top Half | [ ] |
+| Halves | CTRL+ALT+DOWN | Bottom Half | [ ] |
+| Max/Ctr/Rst | CTRL+ALT+ENTER | Maximize | [ ] |
+| Max/Ctr/Rst | CTRL+ALT+C | Center (75%) | [ ] |
+| Max/Ctr/Rst | CTRL+ALT+BACKSPACE | Restore | [ ] |
+| Corners | CTRL+ALT+U | Top Left | [ ] |
+| Corners | CTRL+ALT+I | Top Right | [ ] |
+| Corners | CTRL+ALT+J | Bottom Left | [ ] |
+| Corners | CTRL+ALT+K | Bottom Right | [ ] |
+| Thirds | CTRL+ALT+D | First Third | [ ] |
+| Thirds | CTRL+ALT+F | Center Third | [ ] |
+| Thirds | CTRL+ALT+G | Last Third | [ ] |
+| Thirds | CTRL+ALT+E | First Two Thirds | [ ] |
+| Thirds | CTRL+ALT+T | Last Two Thirds | [ ] |
+| Size | CTRL+ALT+- | Make Smaller | [ ] |
+| Size | CTRL+ALT++ | Make Larger | [ ] |
+
+#### PR 머지 조건
+- [ ] 빌드 성공
+- [ ] 17개 단축키 모두 동작 확인
+- [ ] 제거된 단축키 비동작 확인 (ALT+WIN+C, ALT+WIN+A 등)
+- [ ] 코드 리뷰 승인
+
+---
+
+### Phase 4: Multi-Display 구현 [ ]
+
+**브랜치**: `feature/phase4-multi-display`
+**PR 제목**: `feat: Phase 4 - 다중 모니터 지원`
+
+#### 작업 항목
+- [ ] multimon.go 파일 생성
+- [ ] 모니터 열거 함수 구현 (EnumDisplayMonitors)
+- [ ] 현재 창이 속한 모니터 판별 함수 구현
+- [ ] 다음/이전 모니터 계산 함수 구현 (순환 포함)
+- [ ] 에지 맞춤 변환 함수 구현
+- [ ] 화면 경계 처리 (클리핑) 구현
+- [ ] 이동 지원 단축키에 Multi-Display 로직 적용
+  - Left Half, Right Half
+  - First Third, Last Third
+  - First Two Thirds, Last Two Thirds
+
+#### 구현 확인 방법
+```bash
+# 1. 빌드 성공 확인
+GOOS=windows GOARCH=amd64 go build -o RectangleWin.exe .
+
+# 2. multimon.go 파일 존재 확인
+ls -la multimon.go
+
+# 3. 필수 함수 존재 확인
+grep "func.*Monitor\|func.*monitor" multimon.go
+```
+
+**다중 모니터 테스트** (2개 모니터 환경 필요):
+| 시나리오 | 시작 위치 | 동작 | 기대 결과 | 확인 |
+|----------|-----------|------|-----------|------|
+| Left Half 연속 | 모니터2 중앙 | CTRL+ALT+LEFT x4 | 모니터2 Left → 모니터1 Right → 모니터1 Left → 모니터2 Right (순환) | [ ] |
+| Right Half 연속 | 모니터1 중앙 | CTRL+ALT+RIGHT x4 | 모니터1 Right → 모니터2 Left → 모니터2 Right → 모니터1 Left (순환) | [ ] |
+| First Third 연속 | 모니터2 중앙 | CTRL+ALT+D x4 | 모니터2 First → 모니터1 Last → 모니터1 First → 모니터2 Last (순환) | [ ] |
+| Last Third 연속 | 모니터1 중앙 | CTRL+ALT+G x4 | 동일 패턴 반대 방향 | [ ] |
+| 이동 미지원 | 어디서든 | CTRL+ALT+UP | 현재 모니터 Top Half (이동 없음) | [ ] |
+| 이동 미지원 | 어디서든 | CTRL+ALT+U | 현재 모니터 Top Left (이동 없음) | [ ] |
+
+**단일 모니터 테스트**:
+| 시나리오 | 동작 | 기대 결과 | 확인 |
+|----------|------|-----------|------|
+| Left Half 연속 | CTRL+ALT+LEFT x3 | Left Half 유지 (변화 없음) | [ ] |
+| Right Half 연속 | CTRL+ALT+RIGHT x3 | Right Half 유지 (변화 없음) | [ ] |
+
+#### PR 머지 조건
+- [ ] 빌드 성공
+- [ ] 다중 모니터 환경에서 모든 테스트 통과
+- [ ] 단일 모니터 환경에서 정상 동작
+- [ ] 코드 리뷰 승인
+
+---
+
+### Phase 5: 시스템 트레이 구현 [ ]
+
+**브랜치**: `feature/phase5-system-tray`
+**PR 제목**: `feat: Phase 5 - 시스템 트레이 및 UI`
+
+#### 작업 항목
+- [ ] tray.go 파일 생성
+- [ ] 트레이 아이콘 리소스 준비 (icon.ico)
+- [ ] 트레이 아이콘 표시 구현
+- [ ] 컨텍스트 메뉴 구현
+  - About RectangleWin...
+  - 단축키 목록...
+  - Windows 시작 시 실행 (토글)
+  - Exit
+- [ ] 단축키 목록 창 구현
+- [ ] 시작 프로그램 등록/해제 구현 (레지스트리)
+- [ ] 빌드 스크립트에 -H=windowsgui 추가
+- [ ] Makefile 또는 build.bat 업데이트
+
+#### 구현 확인 방법
+```bash
+# 1. GUI 빌드 성공 확인
+GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe .
+
+# 2. tray.go 파일 존재 확인
+ls -la tray.go
+
+# 3. 레지스트리 관련 함수 확인
+grep "OpenKey\|SetStringValue\|DeleteValue" *.go
+```
+
+**시스템 트레이 테스트**:
+| 테스트 항목 | 기대 결과 | 확인 |
+|-------------|-----------|------|
+| 프로그램 시작 | 콘솔 창 없이 시작, 트레이 아이콘 표시 | [ ] |
+| 트레이 아이콘 hover | "RectangleWin" 툴팁 표시 | [ ] |
+| 트레이 좌클릭 | 아무 동작 없음 | [ ] |
+| 트레이 우클릭 | 컨텍스트 메뉴 표시 | [ ] |
+| About 메뉴 클릭 | About 다이얼로그 표시 | [ ] |
+| 단축키 목록 클릭 | 단축키 목록 창 표시 | [ ] |
+| 단축키 목록 닫기 버튼 | 창 닫힘 | [ ] |
+| 시작 프로그램 토글 ON | 체크 표시, 레지스트리에 등록 | [ ] |
+| 시작 프로그램 토글 OFF | 체크 해제, 레지스트리에서 제거 | [ ] |
+| Exit 클릭 | 프로그램 종료, 트레이 아이콘 제거 | [ ] |
+
+**레지스트리 확인** (PowerShell):
+```powershell
+# 등록 확인
+Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "RectangleWin"
+
+# 제거 확인
+Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "RectangleWin"
+# 결과: 에러 (존재하지 않음)
+```
+
+#### PR 머지 조건
+- [ ] GUI 빌드 성공 (콘솔 숨김)
+- [ ] 트레이 아이콘 정상 표시
+- [ ] 모든 메뉴 동작 확인
+- [ ] 시작 프로그램 등록/해제 동작 확인
+- [ ] 코드 리뷰 승인
+
+---
+
+### Phase 6: 에러 처리 [ ]
+
+**브랜치**: `feature/phase6-error-handling`
+**PR 제목**: `feat: Phase 6 - 단축키 충돌 처리`
+
+#### 작업 항목
+- [ ] 단축키 등록 실패 감지 로직 추가
+- [ ] 충돌 단축키 목록 수집
+- [ ] 메시지 박스 표시 구현
+- [ ] 충돌 외 단축키 정상 등록 보장
+
+#### 구현 확인 방법
+```bash
+# 1. 빌드 성공 확인
+GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe .
+```
+
+**에러 처리 테스트**:
+| 테스트 시나리오 | 방법 | 기대 결과 | 확인 |
+|-----------------|------|-----------|------|
+| 정상 시작 | 단축키 충돌 없이 시작 | 메시지 박스 없이 트레이에 등록 | [ ] |
+| 단축키 충돌 | 다른 프로그램에서 CTRL+ALT+C 사용 후 RectangleWin 시작 | 충돌 메시지 박스 표시, 나머지 단축키 동작 | [ ] |
+| 여러 단축키 충돌 | 여러 단축키 충돌 상황 생성 | 모든 충돌 단축키 목록이 메시지에 표시 | [ ] |
+
+**충돌 시뮬레이션 방법**:
+1. AutoHotkey 또는 다른 프로그램으로 CTRL+ALT+C 등록
+2. RectangleWin 시작
+3. 메시지 박스 확인
+4. 다른 단축키 동작 확인
+
+#### PR 머지 조건
+- [ ] 빌드 성공
+- [ ] 단축키 충돌 시 메시지 박스 정상 표시
+- [ ] 충돌 외 단축키 정상 동작
+- [ ] 코드 리뷰 승인
+
+---
+
+### Phase 7: 최종 테스트 및 문서화 [ ]
+
+**브랜치**: `feature/phase7-final`
+**PR 제목**: `docs: Phase 7 - 최종 검증 및 README 업데이트`
+
+#### 작업 항목
+- [ ] 전체 기능 통합 테스트
+- [ ] README.md 업데이트 (단축키 목록, 설치 방법)
+- [ ] CHANGELOG.md 작성 (선택)
+- [ ] 릴리즈 빌드 생성
+
+#### 구현 확인 방법
+
+**전체 기능 체크리스트** (섹션 9 참조):
+
+**9.1 기본 기능 테스트**:
+- [ ] CTRL+ALT+LEFT → 왼쪽 반
+- [ ] CTRL+ALT+RIGHT → 오른쪽 반
+- [ ] CTRL+ALT+UP → 위쪽 반
+- [ ] CTRL+ALT+DOWN → 아래쪽 반
+- [ ] CTRL+ALT+ENTER → 최대화
+- [ ] CTRL+ALT+C → 75% 크기로 중앙 배치
+- [ ] CTRL+ALT+BACKSPACE → 복원
+- [ ] CTRL+ALT+U → 좌상단 1/4
+- [ ] CTRL+ALT+I → 우상단 1/4
+- [ ] CTRL+ALT+J → 좌하단 1/4
+- [ ] CTRL+ALT+K → 우하단 1/4
+- [ ] CTRL+ALT+D → 왼쪽 1/3
+- [ ] CTRL+ALT+F → 중앙 1/3
+- [ ] CTRL+ALT+G → 오른쪽 1/3
+- [ ] CTRL+ALT+E → 왼쪽 2/3
+- [ ] CTRL+ALT+T → 오른쪽 2/3
+- [ ] CTRL+ALT+- → 창 축소
+- [ ] CTRL+ALT++ → 창 확대
+
+**9.2 Multi-Display 테스트**:
+- [ ] Left Half 연속 → 왼쪽 방향 이동, 순환
+- [ ] Right Half 연속 → 오른쪽 방향 이동, 순환
+- [ ] First Third/Last Third 이동 테스트
+- [ ] First Two Thirds/Last Two Thirds 이동 테스트
+- [ ] 에지 맞춤 동작 확인
+
+**9.3 Restore 테스트**:
+- [ ] Maximize 상태에서 Restore
+- [ ] 스냅 상태에서 Restore
+- [ ] 연속 스냅 후 Restore
+
+**9.4 트레이 테스트**:
+- [ ] 트레이 아이콘 표시
+- [ ] 메뉴 동작
+- [ ] 시작 프로그램 토글
+
+**9.5 에러 처리 테스트**:
+- [ ] 단축키 충돌 시 메시지 박스
+
+**9.6 제거 확인**:
+- [ ] ALT+WIN+C → 작동 안함
+- [ ] ALT+WIN+A → 작동 안함
+
+#### PR 머지 조건
+- [ ] 모든 테스트 항목 통과
+- [ ] README.md 업데이트 완료
+- [ ] 릴리즈 빌드 생성 및 테스트
+- [ ] 코드 리뷰 승인
+
+---
+
+### 진행 상황 요약
+
+| Phase | 설명 | 상태 | PR |
+|-------|------|------|-----|
+| Phase 1 | 코드 정리 | [x] PR 리뷰 중 | [#4](https://github.com/nicewook/RectangleWin/pull/4) |
+| Phase 2 | 기본 기능 수정 | [ ] 대기 | - |
+| Phase 3 | 단축키 재정의 | [ ] 대기 | - |
+| Phase 4 | Multi-Display | [ ] 대기 | - |
+| Phase 5 | 시스템 트레이 | [ ] 대기 | - |
+| Phase 6 | 에러 처리 | [ ] 대기 | - |
+| Phase 7 | 최종 테스트 | [ ] 대기 | - |
 
 ---
 

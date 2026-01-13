@@ -31,8 +31,6 @@ import (
 	"github.com/ahmetb/RectangleWin/w32ex"
 )
 
-var lastResized w32.HWND
-
 func main() {
 	runtime.LockOSThread() // since we bind hotkeys etc that need to dispatch their message here
 	if !w32ex.SetProcessDPIAware() {
@@ -46,74 +44,39 @@ func main() {
 	fmt.Printf("autorun enabled=%v\n", autorun)
 	printMonitors()
 
-	edgeFuncs := [][]resizeFunc{
-		{leftHalf, leftTwoThirds, leftOneThirds},
-		{rightHalf, rightTwoThirds, rightOneThirds},
-		{topHalf, topTwoThirds, topOneThirds},
-		{bottomHalf, bottomTwoThirds, bottomOneThirds}}
-	edgeFuncTurn := make([]int, len(edgeFuncs))
-	cornerFuncs := [][]resizeFunc{
-		{topLeftHalf, topLeftTwoThirds, topLeftOneThirds},
-		{topRightHalf, topRightTwoThirds, topRightOneThirds},
-		{bottomLeftHalf, bottomLeftTwoThirds, bottomLeftOneThirds},
-		{bottomRightHalf, bottomRightTwoThirds, bottomRightOneThirds}}
-	cornerFuncTurn := make([]int, len(cornerFuncs))
-
-	cycleFuncs := func(funcs [][]resizeFunc, turns *[]int, i int) {
-		hwnd := w32.GetForegroundWindow()
-		if hwnd == 0 {
-			panic("foreground window is NULL")
-		}
-		if lastResized != hwnd {
-			*turns = make([]int, len(edgeFuncs)) // reset
-		}
-		if _, err := resize(hwnd, funcs[i][(*turns)[i]%len(funcs[i])]); err != nil {
-			fmt.Printf("warn: resize: %v\n", err)
-			return
-		}
-		(*turns)[i]++
-		for j := 0; j < len(*turns); j++ {
-			if j != i {
-				(*turns)[j] = 0
+	// Simple resize helper - no cycling, just direct snap
+	simpleResize := func(f resizeFunc, name string) func() {
+		return func() {
+			fmt.Printf("Hotkey: %s\n", name)
+			hwnd := w32.GetForegroundWindow()
+			if hwnd == 0 {
+				fmt.Println("warn: foreground window is NULL")
+				return
+			}
+			if _, err := resize(hwnd, f); err != nil {
+				fmt.Printf("warn: resize: %v\n", err)
 			}
 		}
 	}
 
-	cycleEdgeFuncs := func(i int) { cycleFuncs(edgeFuncs, &edgeFuncTurn, i) }
-	cycleCornerFuncs := func(i int) { cycleFuncs(cornerFuncs, &cornerFuncTurn, i) }
-
 	hks := []HotKey{
-		(HotKey{id: 1, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_LEFT, callback: func() { fmt.Println("Hotkey 1"); cycleEdgeFuncs(0) }}),
-		(HotKey{id: 2, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RIGHT, callback: func() { fmt.Println("Hotkey 2"); cycleEdgeFuncs(1) }}),
-		(HotKey{id: 3, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_UP, callback: func() { fmt.Println("Hotkey 3"); cycleEdgeFuncs(2) }}),
-		(HotKey{id: 4, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_DOWN, callback: func() { fmt.Println("Hotkey 4"); cycleEdgeFuncs(3) }}),
-		(HotKey{id: 5, mod: MOD_CONTROL | MOD_ALT | MOD_WIN, vk: w32.VK_LEFT, callback: func() { cycleCornerFuncs(0) }}),
-		(HotKey{id: 6, mod: MOD_CONTROL | MOD_ALT | MOD_WIN, vk: w32.VK_UP, callback: func() { cycleCornerFuncs(1) }}),
-		(HotKey{id: 7, mod: MOD_CONTROL | MOD_ALT | MOD_WIN, vk: w32.VK_DOWN, callback: func() { cycleCornerFuncs(2) }}),
-		(HotKey{id: 8, mod: MOD_CONTROL | MOD_ALT | MOD_WIN, vk: w32.VK_RIGHT, callback: func() { cycleCornerFuncs(3) }}),
-		(HotKey{id: 50, mod: MOD_CONTROL | MOD_ALT, vk: 0x0D /*Enter*/, callback: func() {
-			fmt.Println("Hotkey 50 (Maximize)")
-			lastResized = 0 // cause edgeFuncTurn to be reset
+		// Halves (CTRL+ALT+Arrow)
+		{id: 1, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_LEFT, callback: simpleResize(leftHalf, "Left Half")},
+		{id: 2, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RIGHT, callback: simpleResize(rightHalf, "Right Half")},
+		{id: 3, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_UP, callback: simpleResize(topHalf, "Top Half")},
+		{id: 4, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_DOWN, callback: simpleResize(bottomHalf, "Bottom Half")},
+		// Corners (CTRL+ALT+U/I/J/K)
+		{id: 20, mod: MOD_CONTROL | MOD_ALT, vk: 0x55 /*U*/, callback: simpleResize(topLeftHalf, "Top Left")},
+		{id: 21, mod: MOD_CONTROL | MOD_ALT, vk: 0x49 /*I*/, callback: simpleResize(topRightHalf, "Top Right")},
+		{id: 22, mod: MOD_CONTROL | MOD_ALT, vk: 0x4A /*J*/, callback: simpleResize(bottomLeftHalf, "Bottom Left")},
+		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 0x4B /*K*/, callback: simpleResize(bottomRightHalf, "Bottom Right")},
+		// Maximize (CTRL+ALT+Enter)
+		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: func() {
+			fmt.Println("Hotkey: Maximize")
 			if err := maximize(); err != nil {
 				fmt.Printf("warn: maximize: %v\n", err)
-				return
 			}
-		}}),
-		(HotKey{id: 60, mod: MOD_ALT | MOD_WIN, vk: 0x43 /*C*/, callback: func() {
-			lastResized = 0 // cause edgeFuncTurn to be reset
-			if _, err := resize(w32.GetForegroundWindow(), center); err != nil {
-				fmt.Printf("warn: resize: %v\n", err)
-				return
-			}
-		}}),
-		(HotKey{id: 70, mod: MOD_ALT | MOD_WIN, vk: 0x41 /*A*/, callback: func() {
-			hwnd := w32.GetForegroundWindow()
-			if err := toggleAlwaysOnTop(hwnd); err != nil {
-				fmt.Printf("warn: toggleAlwaysOnTop: %v\n", err)
-				return
-			}
-			fmt.Printf("> toggled always on top: %v\n", hwnd)
-		}}),
+		}},
 	}
 
 	var failedHotKeys []HotKey
@@ -208,7 +171,6 @@ func resize(hwnd w32.HWND, f resizeFunc) (bool, error) {
 	newPos.Right += rExtra
 	newPos.Bottom += bExtra
 
-	lastResized = hwnd
 	if sameRect(rect, &newPos) {
 		fmt.Println("no resize")
 		return false, nil
@@ -233,23 +195,6 @@ func maximize() error {
 	}
 	if !w32.ShowWindow(hwnd, w32.SW_MAXIMIZE) {
 		return fmt.Errorf("failed to ShowWindow:%d", w32.GetLastError())
-	}
-	return nil
-}
-
-func toggleAlwaysOnTop(hwnd w32.HWND) error {
-	if !isZonableWindow(hwnd) {
-		return errors.New("foreground window is not zonable")
-	}
-
-	if w32.GetWindowLong(hwnd, w32.GWL_EXSTYLE)&w32.WS_EX_TOPMOST != 0 {
-		if !w32.SetWindowPos(hwnd, w32.HWND_NOTOPMOST, 0, 0, 0, 0, w32.SWP_NOMOVE|w32.SWP_NOSIZE) {
-			return fmt.Errorf("failed to SetWindowPos(HWND_NOTOPMOST): %v", w32.GetLastError())
-		}
-	} else {
-		if !w32.SetWindowPos(hwnd, w32.HWND_TOPMOST, 0, 0, 0, 0, w32.SWP_NOMOVE|w32.SWP_NOSIZE) {
-			return fmt.Errorf("failed to SetWindowPos(HWND_TOPMOST) :%v", w32.GetLastError())
-		}
 	}
 	return nil
 }
