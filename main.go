@@ -63,6 +63,21 @@ func main() {
 		}
 	}
 
+	// Multi-display resize helper - supports moving between monitors
+	multiDisplayResize := func(pos SnapPosition, name string) func() {
+		return func() {
+			fmt.Printf("Hotkey: %s\n", name)
+			hwnd := w32.GetForegroundWindow()
+			if hwnd == 0 {
+				fmt.Println("warn: foreground window is NULL")
+				return
+			}
+			if _, err := resizeWithMultiDisplay(hwnd, pos); err != nil {
+				fmt.Printf("warn: resize: %v\n", err)
+			}
+		}
+	}
+
 	// Simple action helper - for maximize/restore
 	simpleAction := func(action func() error, name string) func() {
 		return func() {
@@ -75,8 +90,9 @@ func main() {
 
 	hks := []HotKey{
 		// ===== Halves (ID: 1-4) =====
-		{id: 1, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_LEFT, callback: simpleResize(leftHalf, "Left Half")},
-		{id: 2, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RIGHT, callback: simpleResize(rightHalf, "Right Half")},
+		// Left/Right Half support multi-display movement
+		{id: 1, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_LEFT, callback: multiDisplayResize(SnapLeftHalf, "Left Half")},
+		{id: 2, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RIGHT, callback: multiDisplayResize(SnapRightHalf, "Right Half")},
 		{id: 3, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_UP, callback: simpleResize(topHalf, "Top Half")},
 		{id: 4, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_DOWN, callback: simpleResize(bottomHalf, "Bottom Half")},
 
@@ -92,11 +108,12 @@ func main() {
 		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 'K', callback: simpleResize(bottomRightHalf, "Bottom Right")},
 
 		// ===== Thirds (ID: 30-34) =====
-		{id: 30, mod: MOD_CONTROL | MOD_ALT, vk: 'D', callback: simpleResize(leftOneThirds, "First Third")},
+		// First/Last Third and First/Last Two Thirds support multi-display movement
+		{id: 30, mod: MOD_CONTROL | MOD_ALT, vk: 'D', callback: multiDisplayResize(SnapFirstThird, "First Third")},
 		{id: 31, mod: MOD_CONTROL | MOD_ALT, vk: 'F', callback: simpleResize(centerThird, "Center Third")},
-		{id: 32, mod: MOD_CONTROL | MOD_ALT, vk: 'G', callback: simpleResize(rightOneThirds, "Last Third")},
-		{id: 33, mod: MOD_CONTROL | MOD_ALT, vk: 'E', callback: simpleResize(leftTwoThirds, "First Two Thirds")},
-		{id: 34, mod: MOD_CONTROL | MOD_ALT, vk: 'T', callback: simpleResize(rightTwoThirds, "Last Two Thirds")},
+		{id: 32, mod: MOD_CONTROL | MOD_ALT, vk: 'G', callback: multiDisplayResize(SnapLastThird, "Last Third")},
+		{id: 33, mod: MOD_CONTROL | MOD_ALT, vk: 'E', callback: multiDisplayResize(SnapFirstTwoThirds, "First Two Thirds")},
+		{id: 34, mod: MOD_CONTROL | MOD_ALT, vk: 'T', callback: multiDisplayResize(SnapLastTwoThirds, "Last Two Thirds")},
 
 		// ===== Size (ID: 40-41) =====
 		{id: 40, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_OEM_MINUS /*-*/, callback: simpleResize(makeSmaller, "Make Smaller")},
@@ -209,6 +226,75 @@ func resize(hwnd w32.HWND, f resizeFunc) (bool, error) {
 
 	fmt.Printf("> resizing to: %#v (W:%d,H:%d)\n", newPos, newPos.Width(), newPos.Height())
 	if !w32.ShowWindow(hwnd, w32.SW_SHOWNORMAL) { // normalize window first if it's set to SW_SHOWMAXIMIZE (and therefore stays maximized)
+		return false, fmt.Errorf("failed to normalize window ShowWindow:%d", w32.GetLastError())
+	}
+	if !w32.SetWindowPos(hwnd, 0, int(newPos.Left), int(newPos.Top), int(newPos.Width()), int(newPos.Height()), w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
+		return false, fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
+	}
+	rect = w32.GetWindowRect(hwnd)
+	fmt.Printf("> post-resize: %#v(W:%d,H:%d)\n", rect, rect.Width(), rect.Height())
+	return true, nil
+}
+
+// resizeWithMultiDisplay handles snap with multi-display support
+func resizeWithMultiDisplay(hwnd w32.HWND, pos SnapPosition) (bool, error) {
+	if !isZonableWindow(hwnd) {
+		fmt.Printf("warn: non-zonable window: %s\n", w32.GetWindowText(hwnd))
+		return false, nil
+	}
+
+	rect := w32.GetWindowRect(hwnd)
+	hdc := w32.GetDC(hwnd)
+	displayDPI := w32.GetDeviceCaps(hdc, w32.LOGPIXELSY)
+	if !w32.ReleaseDC(hwnd, hdc) {
+		return false, fmt.Errorf("failed to ReleaseDC:%d", w32.GetLastError())
+	}
+
+	ok, frame := w32.DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS(hwnd)
+	if !ok {
+		return false, fmt.Errorf("failed to DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS:%d", w32.GetLastError())
+	}
+	windowDPI := w32ex.GetDpiForWindow(hwnd)
+	resizedFrame := resizeForDpi(frame, int32(windowDPI), int32(displayDPI))
+
+	// Get target monitor and snap function from multi-display logic
+	targetWork, snapFunc, proceed := multiDisplaySnap(hwnd, pos, resizedFrame)
+	if !proceed {
+		fmt.Println("no movement (single monitor or already at position)")
+		return false, nil
+	}
+
+	fmt.Printf("> window: 0x%x %#v (w:%d,h:%d) displayDPI:%d\n", hwnd, rect, rect.Width(), rect.Height(), displayDPI)
+	fmt.Printf("> DWM frame:        %#v (W:%d,H:%d) @ window DPI=%v\n", frame, frame.Width(), frame.Height(), windowDPI)
+	fmt.Printf("> target monitor work: %#v\n", targetWork)
+
+	// calculate how many extra pixels go to win10 invisible borders
+	lExtra := resizedFrame.Left - rect.Left
+	rExtra := -resizedFrame.Right + rect.Right
+	tExtra := resizedFrame.Top - rect.Top
+	bExtra := -resizedFrame.Bottom + rect.Bottom
+
+	newPos := snapFunc(targetWork, resizedFrame)
+
+	// adjust offsets based on invisible borders
+	newPos.Left -= lExtra
+	newPos.Top -= tExtra
+	newPos.Right += rExtra
+	newPos.Bottom += bExtra
+
+	if sameRect(rect, &newPos) {
+		fmt.Println("no resize")
+		return false, nil
+	}
+
+	// 첫 스냅 시에만 현재 상태 저장 (저장된 상태가 없을 때만)
+	if _, exists := savedStates[hwnd]; !exists {
+		savedStates[hwnd] = *rect
+		fmt.Printf("> saved state for restore: %#v\n", *rect)
+	}
+
+	fmt.Printf("> resizing to: %#v (W:%d,H:%d)\n", newPos, newPos.Width(), newPos.Height())
+	if !w32.ShowWindow(hwnd, w32.SW_SHOWNORMAL) {
 		return false, fmt.Errorf("failed to normalize window ShowWindow:%d", w32.GetLastError())
 	}
 	if !w32.SetWindowPos(hwnd, 0, int(newPos.Left), int(newPos.Top), int(newPos.Width()), int(newPos.Height()), w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
