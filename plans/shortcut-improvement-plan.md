@@ -999,7 +999,7 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 | Phase | 설명 | 상태 | PR |
 |-------|------|------|-----|
 | Phase 1 | 코드 정리 | [x] 완료 | [#4](https://github.com/nicewook/RectangleWin/pull/4) |
-| Phase 2 | 기본 기능 수정 | [x] 진행 중 | - |
+| Phase 2 | 기본 기능 수정 | [x] PR 리뷰 중 | [#7](https://github.com/nicewook/RectangleWin/pull/7) |
 | Phase 3 | 단축키 재정의 | [ ] 대기 | - |
 | Phase 4 | Multi-Display | [ ] 대기 | - |
 | Phase 5 | 시스템 트레이 | [ ] 대기 | - |
