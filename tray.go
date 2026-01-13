@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by nicewook on 2026-01-13
+// Changes: Added keyboard shortcuts list menu and dialog
+
 package main
 
 import (
@@ -25,7 +28,7 @@ import (
 //go:embed assets/tray_icon.ico
 var icon []byte
 
-const repo = "https://github.com/ahmetb/RectangleWin"
+const repo = "https://github.com/nicewook/RectangleWin"
 
 func initTray() {
 	systray.Register(onReady, onExit)
@@ -41,12 +44,21 @@ func onReady() {
 		panic(err)
 	}
 
-	mRepo := systray.AddMenuItem("Documentation", "")
+	// About menu - opens repository
+	mAbout := systray.AddMenuItem("About RectangleWin...", "")
 	go func() {
-		for range mRepo.ClickedCh {
+		for range mAbout.ClickedCh {
 			if err := w32.ShellExecute(0, "open", repo, "", "", w32.SW_SHOWNORMAL); err != nil {
 				fmt.Printf("failed to launch browser: (%d), %v\n", w32.GetLastError(), err)
 			}
+		}
+	}()
+
+	// Keyboard shortcuts menu
+	mShortcuts := systray.AddMenuItem("Keyboard Shortcuts...", "")
+	go func() {
+		for range mShortcuts.ClickedCh {
+			showShortcutsDialog()
 		}
 	}()
 
@@ -78,10 +90,10 @@ func onReady() {
 
 	systray.AddSeparator()
 
-	mQuit := systray.AddMenuItem("Quit", "")
+	mQuit := systray.AddMenuItem("Exit", "")
 	go func() {
 		<-mQuit.ClickedCh
-		fmt.Println("clicked Quit")
+		fmt.Println("clicked Exit")
 		systray.Quit()
 	}()
 
@@ -90,4 +102,37 @@ func onReady() {
 
 func onExit() {
 	fmt.Println("onExit invoked")
+}
+
+// showShortcutsDialog displays a message box with all keyboard shortcuts
+func showShortcutsDialog() {
+	shortcuts := `Halves
+  Ctrl+Alt+Left	Left Half
+  Ctrl+Alt+Right	Right Half
+  Ctrl+Alt+Up	Top Half
+  Ctrl+Alt+Down	Bottom Half
+
+Maximize / Center / Restore
+  Ctrl+Alt+Enter	Maximize
+  Ctrl+Alt+C	Center (75%)
+  Ctrl+Alt+Backspace	Restore
+
+Corners
+  Ctrl+Alt+U	Top Left
+  Ctrl+Alt+I	Top Right
+  Ctrl+Alt+J	Bottom Left
+  Ctrl+Alt+K	Bottom Right
+
+Thirds
+  Ctrl+Alt+D	First Third
+  Ctrl+Alt+F	Center Third
+  Ctrl+Alt+G	Last Third
+  Ctrl+Alt+E	First Two Thirds
+  Ctrl+Alt+T	Last Two Thirds
+
+Size
+  Ctrl+Alt+-	Make Smaller
+  Ctrl+Alt++	Make Larger`
+
+	w32.MessageBox(0, shortcuts, "RectangleWin - Keyboard Shortcuts", w32.MB_OK|w32.MB_ICONINFORMATION)
 }
