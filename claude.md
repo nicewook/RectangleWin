@@ -58,6 +58,7 @@ GOOS=windows go build -ldflags -H=windowsgui .
 - WSL에서는 Windows API 관련 코드 빌드/테스트 불가 (GOOS=windows 크로스 컴파일만 가능)
 - 핫키 충돌 시 다른 프로그램이 해당 키 조합 사용 중일 수 있음
 - 시스템 트레이 초기화는 별도 goroutine에서 수행
+- **커밋 전 gofmt 필수**: CI에서 gofmt 검사를 수행하므로, 커밋 전에 반드시 `gofmt -s -w .` 실행
 
 ## 라이선스 (Apache 2.0)
 
