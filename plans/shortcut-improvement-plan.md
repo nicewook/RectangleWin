@@ -716,21 +716,21 @@ grep "func centerThird\|func restore\|savedStates" *.go
 
 ---
 
-### Phase 3: 단축키 재정의 [ ]
+### Phase 3: 단축키 재정의 [x]
 
 **브랜치**: `feature/phase3-hotkeys`
-**PR 제목**: `feat: Phase 3 - 17개 단축키 재정의`
+**PR 제목**: `feat: Phase 3 - 18개 단축키 재정의`
 
 #### 작업 항목
-- [ ] 기존 hks 슬라이스 삭제
-- [ ] 새 hks 슬라이스 작성 (17개)
+- [x] 기존 hks 슬라이스 삭제
+- [x] 새 hks 슬라이스 작성 (18개)
   - Halves: CTRL+ALT+LEFT/RIGHT/UP/DOWN (4개)
   - Maximize/Center/Restore: CTRL+ALT+ENTER/C/BACKSPACE (3개)
   - Corners: CTRL+ALT+U/I/J/K (4개)
   - Thirds: CTRL+ALT+D/F/G/E/T (5개)
   - Size: CTRL+ALT+-/+ (2개)
-- [ ] Hotkey ID 체계 적용 (섹션 8 참조)
-- [ ] 단축키 등록 코드 정리
+- [x] Hotkey ID 체계 적용 (섹션 8 참조)
+- [x] 단축키 등록 코드 정리
 
 #### 구현 확인 방법
 ```bash
@@ -738,8 +738,8 @@ grep "func centerThird\|func restore\|savedStates" *.go
 GOOS=windows GOARCH=amd64 go build -o RectangleWin.exe .
 
 # 2. 단축키 개수 확인
-grep -c "HotkeyInfo{" main.go
-# 결과: 17
+grep -E "^\s+\{id:" main.go | wc -l
+# 결과: 18
 ```
 
 **전체 단축키 동작 테스트**:
@@ -765,8 +765,8 @@ grep -c "HotkeyInfo{" main.go
 | Size | CTRL+ALT++ | Make Larger | [ ] |
 
 #### PR 머지 조건
-- [ ] 빌드 성공
-- [ ] 17개 단축키 모두 동작 확인
+- [x] 빌드 성공
+- [ ] 18개 단축키 모두 동작 확인
 - [ ] 제거된 단축키 비동작 확인 (ALT+WIN+C, ALT+WIN+A 등)
 - [ ] 코드 리뷰 승인
 
