@@ -772,19 +772,19 @@ grep -E "^\s+\{id:" main.go | wc -l
 
 ---
 
-### Phase 4: Multi-Display 구현 [ ]
+### Phase 4: Multi-Display 구현 [x]
 
 **브랜치**: `feature/phase4-multi-display`
 **PR 제목**: `feat: Phase 4 - 다중 모니터 지원`
 
 #### 작업 항목
-- [ ] multimon.go 파일 생성
-- [ ] 모니터 열거 함수 구현 (EnumDisplayMonitors)
-- [ ] 현재 창이 속한 모니터 판별 함수 구현
-- [ ] 다음/이전 모니터 계산 함수 구현 (순환 포함)
-- [ ] 에지 맞춤 변환 함수 구현
-- [ ] 화면 경계 처리 (클리핑) 구현
-- [ ] 이동 지원 단축키에 Multi-Display 로직 적용
+- [x] multimon.go 파일 생성
+- [x] 모니터 열거 함수 구현 (EnumDisplayMonitors)
+- [x] 현재 창이 속한 모니터 판별 함수 구현
+- [x] 다음/이전 모니터 계산 함수 구현 (순환 포함)
+- [x] 에지 맞춤 변환 함수 구현
+- [x] 화면 경계 처리 (클리핑) 구현
+- [x] 이동 지원 단축키에 Multi-Display 로직 적용
   - Left Half, Right Half
   - First Third, Last Third
   - First Two Thirds, Last Two Thirds
@@ -818,31 +818,31 @@ grep "func.*Monitor\|func.*monitor" multimon.go
 | Right Half 연속 | CTRL+ALT+RIGHT x3 | Right Half 유지 (변화 없음) | [ ] |
 
 #### PR 머지 조건
-- [ ] 빌드 성공
-- [ ] 다중 모니터 환경에서 모든 테스트 통과
-- [ ] 단일 모니터 환경에서 정상 동작
-- [ ] 코드 리뷰 승인
+- [x] 빌드 성공
+- [x] 다중 모니터 환경에서 모든 테스트 통과
+- [x] 단일 모니터 환경에서 정상 동작
+- [x] 코드 리뷰 승인
 
 ---
 
-### Phase 5: 시스템 트레이 구현 [ ]
+### Phase 5: 시스템 트레이 구현 [x]
 
 **브랜치**: `feature/phase5-system-tray`
 **PR 제목**: `feat: Phase 5 - 시스템 트레이 및 UI`
 
 #### 작업 항목
-- [ ] tray.go 파일 생성
-- [ ] 트레이 아이콘 리소스 준비 (icon.ico)
-- [ ] 트레이 아이콘 표시 구현
-- [ ] 컨텍스트 메뉴 구현
-  - About RectangleWin...
-  - 단축키 목록...
-  - Windows 시작 시 실행 (토글)
-  - Exit
-- [ ] 단축키 목록 창 구현
-- [ ] 시작 프로그램 등록/해제 구현 (레지스트리)
-- [ ] 빌드 스크립트에 -H=windowsgui 추가
-- [ ] Makefile 또는 build.bat 업데이트
+- [x] tray.go 파일 생성
+- [x] 트레이 아이콘 리소스 준비 (icon.ico)
+- [x] 트레이 아이콘 표시 구현
+- [x] 컨텍스트 메뉴 구현
+  - [x] About RectangleWin...
+  - [x] 단축키 목록...
+  - [x] Windows 시작 시 실행 (토글)
+  - [x] Exit
+- [x] 단축키 목록 창 구현
+- [x] 시작 프로그램 등록/해제 구현 (레지스트리)
+- [x] 빌드 스크립트에 -H=windowsgui 추가 (CLAUDE.md에 문서화됨)
+- [ ] Makefile 또는 build.bat 업데이트 (선택사항)
 
 #### 구현 확인 방법
 ```bash
@@ -999,10 +999,10 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o RectangleWin.exe 
 | Phase | 설명 | 상태 | PR |
 |-------|------|------|-----|
 | Phase 1 | 코드 정리 | [x] 완료 | [#4](https://github.com/nicewook/RectangleWin/pull/4) |
-| Phase 2 | 기본 기능 수정 | [x] PR 리뷰 중 | [#7](https://github.com/nicewook/RectangleWin/pull/7) |
-| Phase 3 | 단축키 재정의 | [ ] 대기 | - |
-| Phase 4 | Multi-Display | [ ] 대기 | - |
-| Phase 5 | 시스템 트레이 | [ ] 대기 | - |
+| Phase 2 | 기본 기능 수정 | [x] 완료 | [#7](https://github.com/nicewook/RectangleWin/pull/7) |
+| Phase 3 | 단축키 재정의 | [x] 완료 | [#8](https://github.com/nicewook/RectangleWin/pull/8) |
+| Phase 4 | Multi-Display | [x] 완료 | [#10](https://github.com/nicewook/RectangleWin/pull/10) |
+| Phase 5 | 시스템 트레이 | [x] PR 리뷰 중 | [#12](https://github.com/nicewook/RectangleWin/pull/12) |
 | Phase 6 | 에러 처리 | [ ] 대기 | - |
 | Phase 7 | 최종 테스트 | [ ] 대기 | - |
 
