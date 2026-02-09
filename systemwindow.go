@@ -78,7 +78,7 @@ func isStandardWindow(hwnd w32.HWND) bool {
 
 	className, ok := w32.GetClassName(hwnd)
 	if !ok {
-		panic("GetClassName failed")
+		return false
 	}
 	return !isSystemClassName(className)
 }

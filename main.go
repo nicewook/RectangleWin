@@ -38,12 +38,13 @@ var savedStates = make(map[w32.HWND]w32.RECT)
 func main() {
 	runtime.LockOSThread() // since we bind hotkeys etc that need to dispatch their message here
 	if !w32ex.SetProcessDPIAware() {
-		panic("failed to set DPI aware")
+		fmt.Println("warn: failed to set DPI aware, continuing without DPI awareness")
 	}
 
 	autorun, err := AutoRunEnabled()
 	if err != nil {
-		panic(err)
+		fmt.Printf("warn: failed to check autorun status: %v\n", err)
+		autorun = false // default to disabled
 	}
 	fmt.Printf("autorun enabled=%v\n", autorun)
 	printMonitors()
@@ -122,7 +123,12 @@ func main() {
 
 	var failedHotKeys []HotKey
 	for _, hk := range hks {
-		if !RegisterHotKey(hk) {
+		ok, err := RegisterHotKey(hk)
+		if err != nil {
+			fmt.Printf("warn: %v\n", err)
+			continue
+		}
+		if !ok {
 			failedHotKeys = append(failedHotKeys, hk)
 		}
 	}
@@ -135,7 +141,7 @@ func main() {
 		showMessageBox(msg)
 	}
 
-	exitCh := make(chan os.Signal)
+	exitCh := make(chan os.Signal, 1)
 	signal.Notify(exitCh, os.Interrupt)
 	go func() {
 		<-exitCh
@@ -149,7 +155,8 @@ func main() {
 	// tray.
 	initTray()
 	if err := msgLoop(); err != nil {
-		panic(err)
+		fmt.Printf("fatal: message loop error: %v\n", err)
+		os.Exit(1)
 	}
 }
 

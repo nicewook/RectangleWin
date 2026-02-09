@@ -54,15 +54,15 @@ func (h HotKey) Describe() string {
 	return out
 }
 
-func RegisterHotKey(h HotKey) bool {
+func RegisterHotKey(h HotKey) (bool, error) {
 	if _, ok := hotkeyRegistrations[h.id]; ok {
-		panic("hotkey id already registered") // TODO ok for now
+		return false, fmt.Errorf("hotkey id %d already registered", h.id)
 	}
 	ok := w32ex.RegisterHotKey(0, h.id, h.mod, h.vk)
 	if ok {
 		hotkeyRegistrations[h.id] = &h
 	}
-	return ok
+	return ok, nil
 }
 
 func msgLoop() error {

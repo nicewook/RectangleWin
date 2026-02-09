@@ -41,7 +41,8 @@ func onReady() {
 
 	autorun, err := AutoRunEnabled()
 	if err != nil {
-		panic(err)
+		fmt.Printf("warn: failed to check autorun status in tray: %v\n", err)
+		autorun = false // default to disabled
 	}
 
 	// About menu - opens repository
