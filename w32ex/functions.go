@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by hsjeong on 2026-02-09
+// Changes: Added Windows 10+ DPI awareness context support with graceful fallback
+
 package w32ex
 
 import (
@@ -25,6 +28,14 @@ const (
 	GA_PARENT    = 1
 	GA_ROOT      = 2
 	GA_ROOTOWNER = 3
+)
+
+// DPI_AWARENESS_CONTEXT values for SetProcessDpiAwarenessContext
+const (
+	DPI_AWARENESS_CONTEXT_UNAWARE              = -1
+	DPI_AWARENESS_CONTEXT_SYSTEM_AWARE         = -2
+	DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    = -3
+	DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
 )
 
 var user32 = syscall.NewLazyDLL("user32.dll")
@@ -62,7 +73,28 @@ func GetShellWindow() (hwnd w32.HWND) {
 	return w32.HWND(r1)
 }
 
+// setProcessDpiAwarenessContext attempts to set DPI awareness using Windows 10+ API
+func setProcessDpiAwarenessContext(value int32) bool {
+	proc := user32.NewProc("SetProcessDpiAwarenessContext")
+	if proc.Find() != nil {
+		return false // Function not available (Windows < 1703)
+	}
+	r1, _, _ := proc.Call(uintptr(value))
+	return r1 != 0
+}
+
+// SetProcessDPIAware sets the process as DPI-aware with fallback support
+// Tries Windows 10+ APIs first, then falls back to legacy API
 func SetProcessDPIAware() bool {
+	// Try Per-Monitor Aware V2 (Windows 10 1703+)
+	if setProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) {
+		return true
+	}
+	// Try Per-Monitor Aware (Windows 8.1+)
+	if setProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE) {
+		return true
+	}
+	// Fall back to legacy API (Windows Vista+)
 	r1, _, _ := user32.NewProc("SetProcessDPIAware").Call()
 	return r1 != 0
 }

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"runtime"
 	"strings"
 
@@ -34,6 +33,29 @@ import (
 
 // savedStates - 스냅 전 창 상태 저장 (창당 1개, 메모리에만 저장)
 var savedStates = make(map[w32.HWND]w32.RECT)
+
+// Modified by hsjeong on 2026-02-09
+// Changes: Added hotkey ID allocation constants and documentation
+// Hotkey ID allocation strategy:
+// IDs are organized into functional groups with gaps for future additions
+// - 1-9:    Edge snaps (Halves)
+// - 10-19:  Window states (Maximize, Center, Restore)
+// - 20-29:  Corner snaps
+// - 30-39:  Third snaps
+// - 40-49:  Size adjustments
+// - 100+:   Reserved for future use
+const (
+	hotkeyIDHalvesMin  = 1
+	hotkeyIDHalvesMax  = 9
+	hotkeyIDStatesMin  = 10
+	hotkeyIDStatesMax  = 19
+	hotkeyIDCornersMin = 20
+	hotkeyIDCornersMax = 29
+	hotkeyIDThirdsMin  = 30
+	hotkeyIDThirdsMax  = 39
+	hotkeyIDSizeMin    = 40
+	hotkeyIDSizeMax    = 49
+)
 
 func main() {
 	runtime.LockOSThread() // since we bind hotkeys etc that need to dispatch their message here
@@ -370,6 +392,12 @@ func resizeForDpi(src w32.RECT, from, to int32) w32.RECT {
 	}
 }
 
+// Modified by hsjeong on 2026-02-09
+// Changes: Replaced reflect.DeepEqual with direct field comparison
 func sameRect(a, b *w32.RECT) bool {
-	return a != nil && b != nil && reflect.DeepEqual(*a, *b)
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Left == b.Left && a.Top == b.Top &&
+		a.Right == b.Right && a.Bottom == b.Bottom
 }

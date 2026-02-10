@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by hsjeong on 2026-02-09
+// Changes: Added hotkey ID validation to RegisterHotKey function
+
 package main
 
 import (
@@ -58,6 +61,12 @@ func RegisterHotKey(h HotKey) (bool, error) {
 	if _, ok := hotkeyRegistrations[h.id]; ok {
 		return false, fmt.Errorf("hotkey id %d already registered", h.id)
 	}
+
+	// Validate ID is within acceptable range
+	if h.id < 1 || h.id >= 100 {
+		return false, fmt.Errorf("hotkey id %d is outside valid range (1-99)", h.id)
+	}
+
 	ok := w32ex.RegisterHotKey(0, h.id, h.mod, h.vk)
 	if ok {
 		hotkeyRegistrations[h.id] = &h
