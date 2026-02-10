@@ -57,7 +57,6 @@ jobs:
       uses: goreleaser/goreleaser-action@v6
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GORELEASER_SKIP_PUBLISH: true
       with:
         distribution: goreleaser
         version: "~> v2"
