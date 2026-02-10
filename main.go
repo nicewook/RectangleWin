@@ -36,6 +36,8 @@ var savedStates = make(map[w32.HWND]w32.RECT)
 
 // Modified by hsjeong on 2026-02-09
 // Changes: Added hotkey ID allocation constants and documentation
+// Modified by hsjeong on 2026-02-10
+// Changes: Added toggle maximize/restore functionality (Ctrl+Alt+Enter)
 // Hotkey ID allocation strategy:
 // IDs are organized into functional groups with gaps for future additions
 // - 1-9:    Edge snaps (Halves)
@@ -114,7 +116,7 @@ func main() {
 		{id: 4, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_DOWN, callback: simpleResize(bottomHalf, "Bottom Half")},
 
 		// ===== Maximize / Center / Restore (ID: 10-12) =====
-		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: simpleAction(maximize, "Maximize")},
+		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: simpleAction(toggleMaximize, "Toggle Maximize")},
 		{id: 11, mod: MOD_CONTROL | MOD_ALT, vk: 'C', callback: simpleResize(center, "Center")},
 		{id: 12, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_BACK /*Backspace*/, callback: simpleAction(restore, "Restore")},
 
@@ -361,6 +363,51 @@ func restore() error {
 	fmt.Println("Restore: no saved state, calling SW_RESTORE")
 	if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
 		return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
+	}
+	return nil
+}
+
+// toggleMaximize - 최대화/복원 토글 함수
+// 최대화 상태면 이전 상태로 복원, 아니면 현재 상태 저장 후 최대화
+func toggleMaximize() error {
+	hwnd := w32.GetForegroundWindow()
+	if !isZonableWindow(hwnd) {
+		return errors.New("foreground window is not zonable")
+	}
+
+	if w32ex.IsZoomed(hwnd) {
+		return restoreMaximizedWindow(hwnd)
+	}
+	return maximizeWithStateSave(hwnd)
+}
+
+// restoreMaximizedWindow - 최대화된 창을 이전 상태로 복원
+func restoreMaximizedWindow(hwnd w32.HWND) error {
+	if state, ok := savedStates[hwnd]; ok {
+		if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
+			return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
+		}
+		if !w32.SetWindowPos(hwnd, 0, int(state.Left), int(state.Top),
+			int(state.Width()), int(state.Height()),
+			w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
+			return fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
+		}
+		delete(savedStates, hwnd)
+		return nil
+	}
+	// 저장된 상태가 없으면 기본 복원
+	if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
+		return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
+	}
+	return nil
+}
+
+// maximizeWithStateSave - 현재 상태를 저장한 후 최대화
+func maximizeWithStateSave(hwnd w32.HWND) error {
+	rect := w32.GetWindowRect(hwnd)
+	savedStates[hwnd] = *rect
+	if !w32.ShowWindow(hwnd, w32.SW_MAXIMIZE) {
+		return fmt.Errorf("failed to ShowWindow:%d", w32.GetLastError())
 	}
 	return nil
 }

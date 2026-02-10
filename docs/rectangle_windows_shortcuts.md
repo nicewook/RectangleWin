@@ -10,7 +10,7 @@ These have been adapted to avoid conflicts with native Windows system shortcuts.
 | **Right Half** | CTRL + ALT + RIGHT_ARROW |
 | **Top Half** | CTRL + ALT + UP_ARROW |
 | **Bottom Half** | CTRL + ALT + DOWN_ARROW |
-| **Maximize** | CTRL + ALT + ENTER |
+| **Maximize/Restore (Toggle)** | CTRL + ALT + ENTER |
 | **Center** | CTRL + ALT + C |
 | **Restore** | CTRL + ALT + BACKSPACE |
 

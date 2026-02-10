@@ -29,22 +29,27 @@ only using hotkeys:
 
 ## Keyboard Bindings
 
-- **Snap to edges** (left/right/top/bottom ½, ⅔, ⅓):
-  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd>
-  - Press multiple times to alternate between ½, ⅔ and ⅓.
+- **Snap to edges** (left/right/top/bottom halves):
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&larr;</kbd>: Left Half
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&rarr;</kbd>: Right Half
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&uarr;</kbd>: Top Half
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&darr;</kbd>: Bottom Half
 
-- **Corner snapping**
-  - <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&larr;</kbd>: top-left ½, ⅔ and ⅓
-  - <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&uarr;</kbd>: top-right ½, ⅔ and ⅓
-  - <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&darr;</kbd>: bottom-left ½, ⅔ and ⅓
-  - <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>&rarr;</kbd>: bottom-right ½, ⅔ and ⅓
+- **Corner snapping** (quadrants):
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>U</kbd>: Top Left
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd>: Top Right
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>J</kbd>: Bottom Left
+  - <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>K</kbd>: Bottom Right
 
-- **Center window** on the display: <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd>
+- **Center window**: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd>
 
-- **Maximize window**: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Enter</kbd>
-  (Previously Win+Shift+F. Note: Windows natively supports <kbd>Win</kbd>+<kbd>&uarr;</kbd>)
+- **Maximize/Restore (toggle)**: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Enter</kbd>
+  - Press to maximize, press again to restore to previous size/position
 
-- **Always On Top (toggle)**: <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>A</kbd>
+- **Restore**: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Backspace</kbd>
+  - Restores maximized or snapped windows to their original position
+
+> **Note:** See [docs/rectangle_windows_shortcuts.md](./docs/rectangle_windows_shortcuts.md) for the complete list of keyboard shortcuts.
 
 ## Why?
 
