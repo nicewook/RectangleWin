@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by hsjeong on 2026-02-10
+// Changes: AutoRunDisable stores empty string instead of deleting; added AutoRunConfigured for first-run detection
+
 package main
 
 import (
@@ -51,11 +54,20 @@ func AutoRunDisable() error {
 	}
 	defer rk.Close()
 
-	err = rk.DeleteValue(AutoRunName)
-	if errors.Is(err, registry.ErrNotExist) {
-		return nil
+	return rk.SetStringValue(AutoRunName, "")
+}
+
+// AutoRunConfigured reports whether the user has ever toggled autorun.
+// Returns false only on first run (registry value does not exist).
+func AutoRunConfigured() bool {
+	rk, err := registry.OpenKey(registry.CURRENT_USER, regKey, registry.QUERY_VALUE)
+	if err != nil {
+		return false
 	}
-	return err
+	defer rk.Close()
+
+	_, _, err = rk.GetStringValue(AutoRunName)
+	return !errors.Is(err, registry.ErrNotExist)
 }
 
 func AutoRunEnable() error {

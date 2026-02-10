@@ -37,7 +37,10 @@ var savedStates = make(map[w32.HWND]w32.RECT)
 // Modified by hsjeong on 2026-02-09
 // Changes: Added hotkey ID allocation constants and documentation
 // Modified by hsjeong on 2026-02-10
-// Changes: Added toggle maximize/restore functionality (Ctrl+Alt+Enter)
+// Changes: Added toggle maximize/restore functionality (Ctrl+Alt+Enter);
+//
+//	Added first-run autorun enable logic
+//
 // Hotkey ID allocation strategy:
 // IDs are organized into functional groups with gaps for future additions
 // - 1-9:    Edge snaps (Halves)
@@ -63,6 +66,15 @@ func main() {
 	if err != nil {
 		fmt.Printf("warn: failed to check autorun status: %v\n", err)
 		autorun = false // default to disabled
+	}
+	// 첫 실행(레지스트리 미설정) 시 자동 활성화
+	if !autorun && !AutoRunConfigured() {
+		if err := AutoRunEnable(); err != nil {
+			fmt.Printf("warn: failed to enable autorun on first run: %v\n", err)
+		} else {
+			fmt.Println("autorun enabled on first run")
+			autorun = true
+		}
 	}
 	fmt.Printf("autorun enabled=%v\n", autorun)
 	printMonitors()
