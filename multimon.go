@@ -97,11 +97,6 @@ type SnapPosition int
 const (
 	SnapLeftHalf SnapPosition = iota
 	SnapRightHalf
-	SnapFirstThird
-	SnapCenterThird
-	SnapLastThird
-	SnapFirstTwoThirds
-	SnapLastTwoThirds
 )
 
 // snapPositionInfo holds snap function and its multi-display behavior
@@ -113,12 +108,8 @@ type snapPositionInfo struct {
 
 // snapPositions defines the behavior for each snap position
 var snapPositions = map[SnapPosition]snapPositionInfo{
-	SnapLeftHalf:       {leftHalf, MoveLeft, SnapRightHalf},
-	SnapRightHalf:      {rightHalf, MoveRight, SnapLeftHalf},
-	SnapFirstThird:     {leftOneThirds, MoveLeft, SnapLastThird},
-	SnapLastThird:      {rightOneThirds, MoveRight, SnapFirstThird},
-	SnapFirstTwoThirds: {leftTwoThirds, MoveLeft, SnapLastTwoThirds},
-	SnapLastTwoThirds:  {rightTwoThirds, MoveRight, SnapFirstTwoThirds},
+	SnapLeftHalf:  {leftHalf, MoveLeft, SnapRightHalf},
+	SnapRightHalf: {rightHalf, MoveRight, SnapLeftHalf},
 }
 
 // isAtSnapPosition checks if window is already at the given snap position

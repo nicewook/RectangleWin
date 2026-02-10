@@ -50,15 +50,11 @@ func toBottom(d w32.RECT, mul, div int32) w32.RECT {
 		Bottom: d.Top + d.Height()}
 }
 
-func leftHalf(disp, _ w32.RECT) w32.RECT      { return toLeft(disp, 1, 2) }
-func leftOneThirds(disp, _ w32.RECT) w32.RECT { return toLeft(disp, 1, 3) }
-func leftTwoThirds(disp, _ w32.RECT) w32.RECT { return toLeft(disp, 2, 3) }
+func leftHalf(disp, _ w32.RECT) w32.RECT { return toLeft(disp, 1, 2) }
 
 func topHalf(disp, _ w32.RECT) w32.RECT { return toTop(disp, 1, 2) }
 
-func rightHalf(disp, _ w32.RECT) w32.RECT      { return toRight(disp, 1, 2) }
-func rightOneThirds(disp, _ w32.RECT) w32.RECT { return toRight(disp, 1, 3) }
-func rightTwoThirds(disp, _ w32.RECT) w32.RECT { return toRight(disp, 2, 3) }
+func rightHalf(disp, _ w32.RECT) w32.RECT { return toRight(disp, 1, 2) }
 
 func bottomHalf(disp, _ w32.RECT) w32.RECT { return toBottom(disp, 1, 2) }
 
@@ -76,60 +72,4 @@ func bottomRightHalf(disp, _ w32.RECT) w32.RECT {
 
 func merge(x, y w32.RECT) w32.RECT {
 	return w32.RECT{Left: x.Left, Right: x.Right, Top: y.Top, Bottom: y.Bottom}
-}
-
-// centerThird - 화면 중앙 1/3
-func centerThird(disp, _ w32.RECT) w32.RECT {
-	return w32.RECT{
-		Left:   disp.Left + disp.Width()/3,
-		Top:    disp.Top,
-		Right:  disp.Left + disp.Width()*2/3,
-		Bottom: disp.Top + disp.Height(),
-	}
-}
-
-// makeSmaller - 해상도 비례 축소 (3%)
-// 창을 현재 위치 중심으로 축소
-func makeSmaller(disp, cur w32.RECT) w32.RECT {
-	resizeStep := disp.Width() * 3 / 100 // 3%
-
-	newWidth := cur.Width() - resizeStep*2
-	newHeight := cur.Height() - resizeStep*2
-
-	// 최소 크기 제한: 100x100
-	if newWidth < 100 {
-		newWidth = 100
-	}
-	if newHeight < 100 {
-		newHeight = 100
-	}
-
-	centerX := cur.Left + cur.Width()/2
-	centerY := cur.Top + cur.Height()/2
-
-	return w32.RECT{
-		Left:   centerX - newWidth/2,
-		Top:    centerY - newHeight/2,
-		Right:  centerX + newWidth/2,
-		Bottom: centerY + newHeight/2,
-	}
-}
-
-// makeLarger - 해상도 비례 확대 (3%)
-// 창을 현재 위치 중심으로 확대
-func makeLarger(disp, cur w32.RECT) w32.RECT {
-	resizeStep := disp.Width() * 3 / 100 // 3%
-
-	newWidth := cur.Width() + resizeStep*2
-	newHeight := cur.Height() + resizeStep*2
-
-	centerX := cur.Left + cur.Width()/2
-	centerY := cur.Top + cur.Height()/2
-
-	return w32.RECT{
-		Left:   centerX - newWidth/2,
-		Top:    centerY - newHeight/2,
-		Right:  centerX + newWidth/2,
-		Bottom: centerY + newHeight/2,
-	}
 }

@@ -41,8 +41,6 @@ var savedStates = make(map[w32.HWND]w32.RECT)
 // - 1-9:    Edge snaps (Halves)
 // - 10-19:  Window states (Maximize, Center, Restore)
 // - 20-29:  Corner snaps
-// - 30-39:  Third snaps
-// - 40-49:  Size adjustments
 // - 100+:   Reserved for future use
 const (
 	hotkeyIDHalvesMin  = 1
@@ -51,10 +49,6 @@ const (
 	hotkeyIDStatesMax  = 19
 	hotkeyIDCornersMin = 20
 	hotkeyIDCornersMax = 29
-	hotkeyIDThirdsMin  = 30
-	hotkeyIDThirdsMax  = 39
-	hotkeyIDSizeMin    = 40
-	hotkeyIDSizeMax    = 49
 )
 
 func main() {
@@ -129,18 +123,6 @@ func main() {
 		{id: 21, mod: MOD_CONTROL | MOD_ALT, vk: 'I', callback: simpleResize(topRightHalf, "Top Right")},
 		{id: 22, mod: MOD_CONTROL | MOD_ALT, vk: 'J', callback: simpleResize(bottomLeftHalf, "Bottom Left")},
 		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 'K', callback: simpleResize(bottomRightHalf, "Bottom Right")},
-
-		// ===== Thirds (ID: 30-34) =====
-		// First/Last Third and First/Last Two Thirds support multi-display movement
-		{id: 30, mod: MOD_CONTROL | MOD_ALT, vk: 'D', callback: multiDisplayResize(SnapFirstThird, "First Third")},
-		{id: 31, mod: MOD_CONTROL | MOD_ALT, vk: 'F', callback: simpleResize(centerThird, "Center Third")},
-		{id: 32, mod: MOD_CONTROL | MOD_ALT, vk: 'G', callback: multiDisplayResize(SnapLastThird, "Last Third")},
-		{id: 33, mod: MOD_CONTROL | MOD_ALT, vk: 'E', callback: multiDisplayResize(SnapFirstTwoThirds, "First Two Thirds")},
-		{id: 34, mod: MOD_CONTROL | MOD_ALT, vk: 'T', callback: multiDisplayResize(SnapLastTwoThirds, "Last Two Thirds")},
-
-		// ===== Size (ID: 40-41) =====
-		{id: 40, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_OEM_MINUS /*-*/, callback: simpleResize(makeSmaller, "Make Smaller")},
-		{id: 41, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_OEM_PLUS /*+*/, callback: simpleResize(makeLarger, "Make Larger")},
 	}
 
 	var failedHotKeys []HotKey

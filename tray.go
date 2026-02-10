@@ -122,18 +122,7 @@ Corners
   Ctrl+Alt+U	Top Left
   Ctrl+Alt+I	Top Right
   Ctrl+Alt+J	Bottom Left
-  Ctrl+Alt+K	Bottom Right
-
-Thirds
-  Ctrl+Alt+D	First Third
-  Ctrl+Alt+F	Center Third
-  Ctrl+Alt+G	Last Third
-  Ctrl+Alt+E	First Two Thirds
-  Ctrl+Alt+T	Last Two Thirds
-
-Size
-  Ctrl+Alt+-	Make Smaller
-  Ctrl+Alt++	Make Larger`
+  Ctrl+Alt+K	Bottom Right`
 
 	w32.MessageBox(0, shortcuts, "RectangleWin - Keyboard Shortcuts", w32.MB_OK|w32.MB_ICONINFORMATION)
 }
