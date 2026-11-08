@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // TODO make it possible to "go generate" on Windows (https://github.com/josephspurrier/goversioninfo/issues/52).
-//go:generate /bin/bash -c "go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest -arm -64 -icon=assets/icon.ico - <<< '{}'"
+//go:generate /bin/bash -c "go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0 -arm -64 -icon=assets/icon.ico - <<< '{}'"
 
 package main
 
@@ -31,15 +31,19 @@ import (
 	"github.com/ahmetb/RectangleWin/w32ex"
 )
 
-// savedStates - 스냅 전 창 상태 저장 (창당 1개, 메모리에만 저장)
-var savedStates = make(map[w32.HWND]w32.RECT)
-
 // Modified by hsjeong on 2026-02-09
 // Changes: Added hotkey ID allocation constants and documentation
 // Modified by hsjeong on 2026-02-10
 // Changes: Added toggle maximize/restore functionality (Ctrl+Alt+Enter);
 //
 //	Added first-run autorun enable logic
+//
+// Modified by hsjeong on 2026-11-08
+// Changes: Removed double DPI correction (process is Per-Monitor v2 aware);
+//
+//	normalize maximized windows before measuring; MOD_NOREPEAT on all hotkeys;
+//	window-state save/restore moved to windowstate.go; autorun path sync;
+//	file logging for GUI builds
 //
 // Hotkey ID allocation strategy:
 // IDs are organized into functional groups with gaps for future additions
@@ -58,86 +62,19 @@ const (
 
 func main() {
 	runtime.LockOSThread() // since we bind hotkeys etc that need to dispatch their message here
+	setupLogging()
 	if !w32ex.SetProcessDPIAware() {
 		fmt.Println("warn: failed to set DPI aware, continuing without DPI awareness")
 	}
 
-	autorun, err := AutoRunEnabled()
+	autorun, err := SyncAutoRun()
 	if err != nil {
-		fmt.Printf("warn: failed to check autorun status: %v\n", err)
-		autorun = false // default to disabled
-	}
-	// 첫 실행(레지스트리 미설정) 시 자동 활성화
-	if !autorun && !AutoRunConfigured() {
-		if err := AutoRunEnable(); err != nil {
-			fmt.Printf("warn: failed to enable autorun on first run: %v\n", err)
-		} else {
-			fmt.Println("autorun enabled on first run")
-			autorun = true
-		}
+		fmt.Printf("warn: failed to sync autorun: %v\n", err)
 	}
 	fmt.Printf("autorun enabled=%v\n", autorun)
 	printMonitors()
 
-	// Simple resize helper - no cycling, just direct snap
-	simpleResize := func(f resizeFunc, name string) func() {
-		return func() {
-			fmt.Printf("Hotkey: %s\n", name)
-			hwnd := w32.GetForegroundWindow()
-			if hwnd == 0 {
-				fmt.Println("warn: foreground window is NULL")
-				return
-			}
-			if _, err := resize(hwnd, f); err != nil {
-				fmt.Printf("warn: resize: %v\n", err)
-			}
-		}
-	}
-
-	// Multi-display resize helper - supports moving between monitors
-	multiDisplayResize := func(pos SnapPosition, name string) func() {
-		return func() {
-			fmt.Printf("Hotkey: %s\n", name)
-			hwnd := w32.GetForegroundWindow()
-			if hwnd == 0 {
-				fmt.Println("warn: foreground window is NULL")
-				return
-			}
-			if _, err := resizeWithMultiDisplay(hwnd, pos); err != nil {
-				fmt.Printf("warn: resize: %v\n", err)
-			}
-		}
-	}
-
-	// Simple action helper - for maximize/restore
-	simpleAction := func(action func() error, name string) func() {
-		return func() {
-			fmt.Printf("Hotkey: %s\n", name)
-			if err := action(); err != nil {
-				fmt.Printf("warn: %s: %v\n", strings.ToLower(name), err)
-			}
-		}
-	}
-
-	hks := []HotKey{
-		// ===== Halves (ID: 1-4) =====
-		// Left/Right Half support multi-display movement
-		{id: 1, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_LEFT, callback: multiDisplayResize(SnapLeftHalf, "Left Half")},
-		{id: 2, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RIGHT, callback: multiDisplayResize(SnapRightHalf, "Right Half")},
-		{id: 3, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_UP, callback: simpleResize(topHalf, "Top Half")},
-		{id: 4, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_DOWN, callback: simpleResize(bottomHalf, "Bottom Half")},
-
-		// ===== Maximize / Center / Restore (ID: 10-12) =====
-		{id: 10, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_RETURN /*Enter*/, callback: simpleAction(toggleMaximize, "Toggle Maximize")},
-		{id: 11, mod: MOD_CONTROL | MOD_ALT, vk: 'C', callback: simpleResize(center, "Center")},
-		{id: 12, mod: MOD_CONTROL | MOD_ALT, vk: w32.VK_BACK /*Backspace*/, callback: simpleAction(restore, "Restore")},
-
-		// ===== Corners (ID: 20-23) =====
-		{id: 20, mod: MOD_CONTROL | MOD_ALT, vk: 'U', callback: simpleResize(topLeftHalf, "Top Left")},
-		{id: 21, mod: MOD_CONTROL | MOD_ALT, vk: 'I', callback: simpleResize(topRightHalf, "Top Right")},
-		{id: 22, mod: MOD_CONTROL | MOD_ALT, vk: 'J', callback: simpleResize(bottomLeftHalf, "Bottom Left")},
-		{id: 23, mod: MOD_CONTROL | MOD_ALT, vk: 'K', callback: simpleResize(bottomRightHalf, "Bottom Right")},
-	}
+	hks := defaultHotKeys()
 
 	var failedHotKeys []HotKey
 	for _, hk := range hks {
@@ -178,6 +115,74 @@ func main() {
 	}
 }
 
+// MOD_NOREPEAT: holding a combination down must not fire it repeatedly
+// (repeated maximize toggles / monitor cycling).
+const hotkeyMod = MOD_CONTROL | MOD_ALT | MOD_NOREPEAT
+
+// defaultHotKeys is the single source of truth for all registered hotkeys.
+func defaultHotKeys() []HotKey {
+	return []HotKey{
+		// ===== Halves (ID: 1-4) =====
+		// Left/Right Half support multi-display movement
+		{id: 1, mod: hotkeyMod, vk: w32.VK_LEFT, name: "Left Half", callback: multiDisplayResize(SnapLeftHalf, "Left Half")},
+		{id: 2, mod: hotkeyMod, vk: w32.VK_RIGHT, name: "Right Half", callback: multiDisplayResize(SnapRightHalf, "Right Half")},
+		{id: 3, mod: hotkeyMod, vk: w32.VK_UP, name: "Top Half", callback: simpleResize(topHalf, "Top Half")},
+		{id: 4, mod: hotkeyMod, vk: w32.VK_DOWN, name: "Bottom Half", callback: simpleResize(bottomHalf, "Bottom Half")},
+
+		// ===== Maximize / Center / Restore (ID: 10-12) =====
+		{id: 10, mod: hotkeyMod, vk: w32.VK_RETURN /*Enter*/, name: "Maximize", callback: simpleAction(toggleMaximize, "Toggle Maximize")},
+		{id: 11, mod: hotkeyMod, vk: 'C', name: "Center", callback: simpleResize(center, "Center")},
+		{id: 12, mod: hotkeyMod, vk: w32.VK_BACK /*Backspace*/, name: "Restore", callback: simpleAction(restore, "Restore")},
+
+		// ===== Corners (ID: 20-23) =====
+		{id: 20, mod: hotkeyMod, vk: 'U', name: "Top Left", callback: simpleResize(topLeftHalf, "Top Left")},
+		{id: 21, mod: hotkeyMod, vk: 'I', name: "Top Right", callback: simpleResize(topRightHalf, "Top Right")},
+		{id: 22, mod: hotkeyMod, vk: 'J', name: "Bottom Left", callback: simpleResize(bottomLeftHalf, "Bottom Left")},
+		{id: 23, mod: hotkeyMod, vk: 'K', name: "Bottom Right", callback: simpleResize(bottomRightHalf, "Bottom Right")},
+	}
+}
+
+// simpleResize snaps the foreground window on its current monitor.
+func simpleResize(f resizeFunc, name string) func() {
+	return func() {
+		fmt.Printf("Hotkey: %s\n", name)
+		hwnd := w32.GetForegroundWindow()
+		if hwnd == 0 {
+			fmt.Println("warn: foreground window is NULL")
+			return
+		}
+		if _, err := resize(hwnd, f); err != nil {
+			fmt.Printf("warn: resize: %v\n", err)
+		}
+	}
+}
+
+// multiDisplayResize snaps the foreground window, moving it to the adjacent
+// monitor when it is already at the requested position.
+func multiDisplayResize(pos SnapPosition, name string) func() {
+	return func() {
+		fmt.Printf("Hotkey: %s\n", name)
+		hwnd := w32.GetForegroundWindow()
+		if hwnd == 0 {
+			fmt.Println("warn: foreground window is NULL")
+			return
+		}
+		if _, err := resizeWithMultiDisplay(hwnd, pos); err != nil {
+			fmt.Printf("warn: resize: %v\n", err)
+		}
+	}
+}
+
+// simpleAction wraps maximize/restore style actions.
+func simpleAction(action func() error, name string) func() {
+	return func() {
+		fmt.Printf("Hotkey: %s\n", name)
+		if err := action(); err != nil {
+			fmt.Printf("warn: %s: %v\n", strings.ToLower(name), err)
+		}
+	}
+}
+
 func showMessageBox(text string) {
 	w32.MessageBox(w32.GetActiveWindow(), text, "RectangleWin", w32.MB_ICONWARNING|w32.MB_OK)
 }
@@ -196,241 +201,169 @@ func center(disp, _ w32.RECT) w32.RECT {
 	}
 }
 
+// snapRect computes the outer window rectangle (what SetWindowPos expects)
+// that places the window's visible frame at f(work, frame).
+//
+// rect is the window rect (GetWindowRect) and frame is the visible frame
+// (DWMWA_EXTENDED_FRAME_BOUNDS). The process is Per-Monitor v2 DPI aware, so
+// both are in physical pixels and their difference is exactly the invisible
+// resize border; no DPI scaling must be applied.
+func snapRect(rect, frame, work w32.RECT, f resizeFunc) w32.RECT {
+	newPos := f(work, frame)
+	newPos.Left -= frame.Left - rect.Left
+	newPos.Top -= frame.Top - rect.Top
+	newPos.Right += rect.Right - frame.Right
+	newPos.Bottom += rect.Bottom - frame.Bottom
+	return newPos
+}
+
+// targetChooser decides where to snap given the window's visible frame.
+// wasMaximized reports that the window was maximized before snapWindow
+// normalized it (its frame is then the normal, not the visible, position).
+// It returns the work area to snap into, the layout function and whether to
+// proceed at all.
+type targetChooser func(hwnd w32.HWND, frame w32.RECT, wasMaximized bool) (w32.RECT, resizeFunc, bool)
+
 func resize(hwnd w32.HWND, f resizeFunc) (bool, error) {
-	if !isZonableWindow(hwnd) {
-		fmt.Printf("warn: non-zonable window: %s\n", w32.GetWindowText(hwnd))
-		return false, nil
-	}
-	rect := w32.GetWindowRect(hwnd)
-	mon := w32.MonitorFromWindow(hwnd, w32.MONITOR_DEFAULTTONEAREST)
-	hdc := w32.GetDC(hwnd)
-	displayDPI := w32.GetDeviceCaps(hdc, w32.LOGPIXELSY)
-	if !w32.ReleaseDC(hwnd, hdc) {
-		return false, fmt.Errorf("failed to ReleaseDC:%d", w32.GetLastError())
-	}
-	var monInfo w32.MONITORINFO
-	if !w32.GetMonitorInfo(mon, &monInfo) {
-		return false, fmt.Errorf("failed to GetMonitorInfo:%d", w32.GetLastError())
-	}
-
-	ok, frame := w32.DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS(hwnd)
-	if !ok {
-		return false, fmt.Errorf("failed to DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS:%d", w32.GetLastError())
-	}
-	windowDPI := w32ex.GetDpiForWindow(hwnd)
-	resizedFrame := resizeForDpi(frame, int32(windowDPI), int32(displayDPI))
-
-	fmt.Printf("> window: 0x%x %#v (w:%d,h:%d) mon=0x%X(@ display DPI:%d)\n", hwnd, rect, rect.Width(), rect.Height(), mon, displayDPI)
-	fmt.Printf("> DWM frame:        %#v (W:%d,H:%d) @ window DPI=%v\n", frame, frame.Width(), frame.Height(), windowDPI)
-	fmt.Printf("> DPI-less frame:   %#v (W:%d,H:%d)\n", resizedFrame, resizedFrame.Width(), resizedFrame.Height())
-
-	// calculate how many extra pixels go to win10 invisible borders
-	lExtra := resizedFrame.Left - rect.Left
-	rExtra := -resizedFrame.Right + rect.Right
-	tExtra := resizedFrame.Top - rect.Top
-	bExtra := -resizedFrame.Bottom + rect.Bottom
-
-	newPos := f(monInfo.RcWork, resizedFrame)
-
-	// adjust offsets based on invisible borders
-	newPos.Left -= lExtra
-	newPos.Top -= tExtra
-	newPos.Right += rExtra
-	newPos.Bottom += bExtra
-
-	if sameRect(rect, &newPos) {
-		fmt.Println("no resize")
-		return false, nil
-	}
-
-	// 첫 스냅 시에만 현재 상태 저장 (저장된 상태가 없을 때만)
-	if _, exists := savedStates[hwnd]; !exists {
-		savedStates[hwnd] = *rect
-		fmt.Printf("> saved state for restore: %#v\n", *rect)
-	}
-
-	fmt.Printf("> resizing to: %#v (W:%d,H:%d)\n", newPos, newPos.Width(), newPos.Height())
-	if !w32.ShowWindow(hwnd, w32.SW_SHOWNORMAL) { // normalize window first if it's set to SW_SHOWMAXIMIZE (and therefore stays maximized)
-		return false, fmt.Errorf("failed to normalize window ShowWindow:%d", w32.GetLastError())
-	}
-	if !w32.SetWindowPos(hwnd, 0, int(newPos.Left), int(newPos.Top), int(newPos.Width()), int(newPos.Height()), w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
-		return false, fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
-	}
-	rect = w32.GetWindowRect(hwnd)
-	fmt.Printf("> post-resize: %#v(W:%d,H:%d)\n", rect, rect.Width(), rect.Height())
-	return true, nil
+	return snapWindow(hwnd, func(hwnd w32.HWND, _ w32.RECT, _ bool) (w32.RECT, resizeFunc, bool) {
+		mon := w32.MonitorFromWindow(hwnd, w32.MONITOR_DEFAULTTONEAREST)
+		var monInfo w32.MONITORINFO
+		if !w32.GetMonitorInfo(mon, &monInfo) {
+			fmt.Printf("warn: failed to GetMonitorInfo:%d\n", w32.GetLastError())
+			return w32.RECT{}, nil, false
+		}
+		return monInfo.RcWork, f, true
+	})
 }
 
 // resizeWithMultiDisplay handles snap with multi-display support
 func resizeWithMultiDisplay(hwnd w32.HWND, pos SnapPosition) (bool, error) {
+	return snapWindow(hwnd, func(hwnd w32.HWND, frame w32.RECT, wasMaximized bool) (w32.RECT, resizeFunc, bool) {
+		// A maximized window is not "at" a half position even if its normal
+		// bounds are, so it must snap on its current monitor, not cycle.
+		work, f, ok := multiDisplaySnap(hwnd, pos, frame, !wasMaximized)
+		if !ok {
+			fmt.Println("no movement (single monitor or already at position)")
+		}
+		return work, f, ok
+	})
+}
+
+func snapWindow(hwnd w32.HWND, choose targetChooser) (bool, error) {
 	if !isZonableWindow(hwnd) {
 		fmt.Printf("warn: non-zonable window: %s\n", w32.GetWindowText(hwnd))
 		return false, nil
 	}
 
-	rect := w32.GetWindowRect(hwnd)
-	hdc := w32.GetDC(hwnd)
-	displayDPI := w32.GetDeviceCaps(hdc, w32.LOGPIXELSY)
-	if !w32.ReleaseDC(hwnd, hdc) {
-		return false, fmt.Errorf("failed to ReleaseDC:%d", w32.GetLastError())
+	// Capture the placement before touching the window so that Restore can
+	// bring a maximized window back as maximized.
+	placement, havePlacement := getPlacement(hwnd)
+
+	// A maximized window reports maximized bounds and borders; normalize it
+	// first and measure the normal window instead.
+	wasMaximized := w32ex.IsZoomed(hwnd)
+	if wasMaximized {
+		w32.ShowWindow(hwnd, w32.SW_SHOWNORMAL) // return value is previous visibility, not success
 	}
 
+	rect := w32.GetWindowRect(hwnd)
+	if rect == nil {
+		return false, fmt.Errorf("failed to GetWindowRect:%d", w32.GetLastError())
+	}
 	ok, frame := w32.DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS(hwnd)
 	if !ok {
-		return false, fmt.Errorf("failed to DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS:%d", w32.GetLastError())
+		// No DWM frame info: treat the window rect as the visible frame.
+		fmt.Printf("warn: DwmGetWindowAttribute failed (%d), assuming no invisible borders\n", w32.GetLastError())
+		frame = *rect
 	}
-	windowDPI := w32ex.GetDpiForWindow(hwnd)
-	resizedFrame := resizeForDpi(frame, int32(windowDPI), int32(displayDPI))
 
-	// Get target monitor and snap function from multi-display logic
-	targetWork, snapFunc, proceed := multiDisplaySnap(hwnd, pos, resizedFrame)
+	work, f, proceed := choose(hwnd, frame, wasMaximized)
 	if !proceed {
-		fmt.Println("no movement (single monitor or already at position)")
 		return false, nil
 	}
+	newPos := snapRect(*rect, frame, work, f)
 
-	fmt.Printf("> window: 0x%x %#v (w:%d,h:%d) displayDPI:%d\n", hwnd, rect, rect.Width(), rect.Height(), displayDPI)
-	fmt.Printf("> DWM frame:        %#v (W:%d,H:%d) @ window DPI=%v\n", frame, frame.Width(), frame.Height(), windowDPI)
-	fmt.Printf("> target monitor work: %#v\n", targetWork)
+	fmt.Printf("> window: 0x%x %#v (w:%d,h:%d)\n", hwnd, *rect, rect.Width(), rect.Height())
+	fmt.Printf("> DWM frame:   %#v (W:%d,H:%d)\n", frame, frame.Width(), frame.Height())
+	fmt.Printf("> work area:   %#v\n", work)
 
-	// calculate how many extra pixels go to win10 invisible borders
-	lExtra := resizedFrame.Left - rect.Left
-	rExtra := -resizedFrame.Right + rect.Right
-	tExtra := resizedFrame.Top - rect.Top
-	bExtra := -resizedFrame.Bottom + rect.Bottom
-
-	newPos := snapFunc(targetWork, resizedFrame)
-
-	// adjust offsets based on invisible borders
-	newPos.Left -= lExtra
-	newPos.Top -= tExtra
-	newPos.Right += rExtra
-	newPos.Bottom += bExtra
+	// Save before the no-op check: if normalization alone already put the
+	// window at the target, it still changed state (maximized -> snapped) and
+	// Restore must be able to bring the maximized state back.
+	if havePlacement && (wasMaximized || !sameRect(rect, &newPos)) {
+		saveStateIfAbsent(hwnd, placement, true)
+	}
 
 	if sameRect(rect, &newPos) {
 		fmt.Println("no resize")
-		return false, nil
-	}
-
-	// 첫 스냅 시에만 현재 상태 저장 (저장된 상태가 없을 때만)
-	if _, exists := savedStates[hwnd]; !exists {
-		savedStates[hwnd] = *rect
-		fmt.Printf("> saved state for restore: %#v\n", *rect)
+		return wasMaximized, nil
 	}
 
 	fmt.Printf("> resizing to: %#v (W:%d,H:%d)\n", newPos, newPos.Width(), newPos.Height())
-	if !w32.ShowWindow(hwnd, w32.SW_SHOWNORMAL) {
-		return false, fmt.Errorf("failed to normalize window ShowWindow:%d", w32.GetLastError())
-	}
 	if !w32.SetWindowPos(hwnd, 0, int(newPos.Left), int(newPos.Top), int(newPos.Width()), int(newPos.Height()), w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
 		return false, fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
 	}
-	rect = w32.GetWindowRect(hwnd)
-	fmt.Printf("> post-resize: %#v(W:%d,H:%d)\n", rect, rect.Width(), rect.Height())
+	if post := w32.GetWindowRect(hwnd); post != nil {
+		fmt.Printf("> post-resize: %#v(W:%d,H:%d)\n", *post, post.Width(), post.Height())
+	}
 	return true, nil
 }
 
-func maximize() error {
-	hwnd := w32.GetForegroundWindow()
-	if !isZonableWindow(hwnd) {
-		return errors.New("foreground window is not zonable")
-	}
-	if !w32.ShowWindow(hwnd, w32.SW_MAXIMIZE) {
-		return fmt.Errorf("failed to ShowWindow:%d", w32.GetLastError())
-	}
-	return nil
+// restore - 통합 복원 함수
+// 1. 최대화 상태 → SW_RESTORE (저장된 상태는 유지)
+// 2. 저장된 상태 있음 → 첫 스냅 전 상태(위치·최대화 여부)로 복원
+// 3. 그 외 → SW_RESTORE
+func restore() error {
+	return restoreWindow(w32.GetForegroundWindow())
 }
 
-// restore - 통합 복원 함수
-// 1. 최대화 상태 → SW_RESTORE
-// 2. 스냅 상태 → 저장된 원래 위치로 복원
-func restore() error {
-	hwnd := w32.GetForegroundWindow()
+func restoreWindow(hwnd w32.HWND) error {
 	if !isZonableWindow(hwnd) {
-		return errors.New("foreground window is not zonable")
+		return errors.New("window is not zonable")
 	}
 
-	// 1. 최대화 상태 확인
 	if w32ex.IsZoomed(hwnd) {
 		fmt.Println("Restore: window is maximized, calling SW_RESTORE")
-		if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
-			return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
+		w32.ShowWindow(hwnd, w32.SW_RESTORE)
+		dropMaximizeOnlyState(hwnd)
+		return nil
+	}
+
+	if placement, ok := takeSavedState(hwnd); ok {
+		fmt.Printf("Restore: restoring saved placement %#v (showCmd=%d)\n", placement.RcNormalPosition, placement.ShowCmd)
+		if !w32.SetWindowPlacement(hwnd, &placement) {
+			return fmt.Errorf("failed to SetWindowPlacement:%d", w32.GetLastError())
 		}
 		return nil
 	}
 
-	// 2. 저장된 상태가 있으면 복원
-	if state, ok := savedStates[hwnd]; ok {
-		fmt.Printf("Restore: restoring to saved state %#v\n", state)
-		if !w32.SetWindowPos(hwnd, 0, int(state.Left), int(state.Top),
-			int(state.Width()), int(state.Height()),
-			w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
-			return fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
-		}
-		delete(savedStates, hwnd)
-		return nil
-	}
-
-	// 3. 저장된 상태가 없으면 SW_RESTORE 시도 (최소화 등 다른 상태 복원)
 	fmt.Println("Restore: no saved state, calling SW_RESTORE")
-	if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
-		return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
-	}
+	w32.ShowWindow(hwnd, w32.SW_RESTORE)
 	return nil
 }
 
-// toggleMaximize - 최대화/복원 토글 함수
-// 최대화 상태면 이전 상태로 복원, 아니면 현재 상태 저장 후 최대화
+// toggleMaximize - 최대화/복원 토글
+// 최대화 상태면 SW_RESTORE(최대화 직전 위치로), 아니면 최대화한다.
+// 최대화할 때는 저장된 상태가 없을 때만 저장한다(첫 스냅 전 위치를 덮어쓰지 않음).
 func toggleMaximize() error {
-	hwnd := w32.GetForegroundWindow()
+	return toggleMaximizeWindow(w32.GetForegroundWindow())
+}
+
+func toggleMaximizeWindow(hwnd w32.HWND) error {
 	if !isZonableWindow(hwnd) {
-		return errors.New("foreground window is not zonable")
+		return errors.New("window is not zonable")
 	}
 
 	if w32ex.IsZoomed(hwnd) {
-		return restoreMaximizedWindow(hwnd)
-	}
-	return maximizeWithStateSave(hwnd)
-}
-
-// restoreMaximizedWindow - 최대화된 창을 이전 상태로 복원
-func restoreMaximizedWindow(hwnd w32.HWND) error {
-	if state, ok := savedStates[hwnd]; ok {
-		if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
-			return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
-		}
-		if !w32.SetWindowPos(hwnd, 0, int(state.Left), int(state.Top),
-			int(state.Width()), int(state.Height()),
-			w32.SWP_NOZORDER|w32.SWP_NOACTIVATE) {
-			return fmt.Errorf("failed to SetWindowPos:%d", w32.GetLastError())
-		}
-		delete(savedStates, hwnd)
+		w32.ShowWindow(hwnd, w32.SW_RESTORE)
+		dropMaximizeOnlyState(hwnd)
 		return nil
 	}
-	// 저장된 상태가 없으면 기본 복원
-	if !w32.ShowWindow(hwnd, w32.SW_RESTORE) {
-		return fmt.Errorf("failed to ShowWindow(SW_RESTORE):%d", w32.GetLastError())
+	if placement, ok := getPlacement(hwnd); ok {
+		saveStateIfAbsent(hwnd, placement, false)
 	}
+	w32.ShowWindow(hwnd, w32.SW_MAXIMIZE)
 	return nil
-}
-
-// maximizeWithStateSave - 현재 상태를 저장한 후 최대화
-func maximizeWithStateSave(hwnd w32.HWND) error {
-	rect := w32.GetWindowRect(hwnd)
-	savedStates[hwnd] = *rect
-	if !w32.ShowWindow(hwnd, w32.SW_MAXIMIZE) {
-		return fmt.Errorf("failed to ShowWindow:%d", w32.GetLastError())
-	}
-	return nil
-}
-
-func resizeForDpi(src w32.RECT, from, to int32) w32.RECT {
-	return w32.RECT{
-		Left:   src.Left * to / from,
-		Right:  src.Right * to / from,
-		Top:    src.Top * to / from,
-		Bottom: src.Bottom * to / from,
-	}
 }
 
 // Modified by hsjeong on 2026-02-09

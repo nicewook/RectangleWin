@@ -10,22 +10,25 @@ A minimalistic Windows rewrite of macOS
 
 A hotkey-oriented window snapping and resizing tool for Windows.
 
-This animation illustrates how RectangleWin helps me move windows to edges
-and corners (and cycle through half, one-thirds or two thirds width or height)
-only using hotkeys:
+This animation (from the upstream project) illustrates how RectangleWin helps
+move windows to edges and corners only using hotkeys. This fork supports halves,
+corners, center, maximize and restore; thirds cycling is not implemented:
 
 ![RectangleWin demo](./assets/RectangleWin-demo.gif)
 
 ## Install
 
-1. Go to [Releases](https://github.com/ahmetb/RectangleWin/releases) and
+1. Go to [Releases](https://github.com/nicewook/RectangleWin/releases) and
    download the suitable binary for your architecture (typically x64).
 
 2. Launch the `.exe` file. Now the program icon should be visible on system
    tray!
 
-3. Click on the icon and mark as "Run on startup" to make sure you don't have
-   to run it every time you reboot your PC.
+3. "Run on startup" is enabled automatically on first launch (uncheck it in the
+   tray menu to disable). When you launch a newer version, the startup entry is
+   updated to point to it.
+
+Diagnostic logs are written to `%LOCALAPPDATA%\RectangleWin\RectangleWin.log`.
 
 ## Keyboard Bindings
 
@@ -48,6 +51,10 @@ only using hotkeys:
 
 - **Restore**: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Backspace</kbd>
   - Restores maximized or snapped windows to their original position
+    (a window that was maximized before snapping is maximized again)
+
+- **Multi-display**: pressing Left/Right Half again moves the window to the
+  adjacent display.
 
 > **Note:** See [docs/rectangle_windows_shortcuts.md](./docs/rectangle_windows_shortcuts.md) for the complete list of keyboard shortcuts.
 
@@ -69,7 +76,7 @@ are not offering enough hotkey support.
 
 ## Development (Install from source)
 
-With Go 1.25+ installed, clone this repository and run:
+With Go 1.27+ installed, clone this repository and run:
 
 ```sh
 go generate

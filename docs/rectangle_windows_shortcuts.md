@@ -22,20 +22,8 @@ These have been adapted to avoid conflicts with native Windows system shortcuts.
 | **Bottom Left** | CTRL + ALT + J |
 | **Bottom Right** | CTRL + ALT + K |
 
-## Thirds
-| Action | Shortcut |
-| :--- | :--- |
-| **First Third (Left)** | CTRL + ALT + D |
-| **Center Third** | CTRL + ALT + F |
-| **Last Third (Right)** | CTRL + ALT + G |
-| **First Two Thirds** | CTRL + ALT + E |
-| **Last Two Thirds** | CTRL + ALT + T |
-
-## Size
-| Action | Shortcut |
-| :--- | :--- |
-| **Make Smaller** | CTRL + ALT + - |
-| **Make Larger** | CTRL + ALT + + |
-
 ## Multi-Display
-Repeatedly pressing the same shortcut (Halves, Thirds) will move the window to the next display and wrap around
+Pressing Left Half / Right Half again when the window is already there moves it to the
+adjacent display (edge-aligned) and wraps around. Other shortcuts act on the current display.
+
+> Thirds and Make Smaller/Larger are not implemented.

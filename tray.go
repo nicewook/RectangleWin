@@ -14,12 +14,15 @@
 
 // Modified by nicewook on 2026-01-13
 // Changes: Added keyboard shortcuts list menu and dialog
+// Modified by hsjeong on 2026-11-08
+// Changes: Shortcuts dialog is generated from the hotkey table
 
 package main
 
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"fyne.io/systray"
 	"github.com/gonutz/w32/v2"
@@ -105,24 +108,37 @@ func onExit() {
 	fmt.Println("onExit invoked")
 }
 
+// shortcutsText renders the shortcuts dialog from the hotkey table so the
+// dialog can never drift from what is actually registered.
+func shortcutsText(hks []HotKey) string {
+	groups := []struct {
+		title    string
+		min, max int
+	}{
+		{"Halves", hotkeyIDHalvesMin, hotkeyIDHalvesMax},
+		{"Maximize / Center / Restore", hotkeyIDStatesMin, hotkeyIDStatesMax},
+		{"Corners", hotkeyIDCornersMin, hotkeyIDCornersMax},
+	}
+	var b strings.Builder
+	for _, g := range groups {
+		var lines []string
+		for _, h := range hks {
+			if h.id >= g.min && h.id <= g.max {
+				lines = append(lines, "  "+h.Shortcut()+"\t"+h.name)
+			}
+		}
+		if len(lines) == 0 {
+			continue
+		}
+		if b.Len() > 0 {
+			b.WriteString("\n\n")
+		}
+		b.WriteString(g.title + "\n" + strings.Join(lines, "\n"))
+	}
+	return b.String()
+}
+
 // showShortcutsDialog displays a message box with all keyboard shortcuts
 func showShortcutsDialog() {
-	shortcuts := `Halves
-  Ctrl+Alt+Left	Left Half
-  Ctrl+Alt+Right	Right Half
-  Ctrl+Alt+Up	Top Half
-  Ctrl+Alt+Down	Bottom Half
-
-Maximize / Center / Restore
-  Ctrl+Alt+Enter	Maximize
-  Ctrl+Alt+C	Center (75%)
-  Ctrl+Alt+Backspace	Restore
-
-Corners
-  Ctrl+Alt+U	Top Left
-  Ctrl+Alt+I	Top Right
-  Ctrl+Alt+J	Bottom Left
-  Ctrl+Alt+K	Bottom Right`
-
-	w32.MessageBox(0, shortcuts, "RectangleWin - Keyboard Shortcuts", w32.MB_OK|w32.MB_ICONINFORMATION)
+	w32.MessageBox(0, shortcutsText(defaultHotKeys()), "RectangleWin - Keyboard Shortcuts", w32.MB_OK|w32.MB_ICONINFORMATION)
 }

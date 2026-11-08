@@ -12,11 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by hsjeong on 2026-02-10
+// Changes: Removed thirds/size helpers (feature dropped); halves and corners only
+// Modified by hsjeong on 2026-11-08
+// Changes: Right/bottom snaps start where left/top end (no 1px gap on odd sizes)
+
 package main
 
 import "github.com/gonutz/w32/v2"
 
-// TODO find a way to round up divisions consistently, otherwise we end up with off by 1px
+// toRight/toBottom start exactly where toLeft/toTop(div-mul, div) end, so
+// complementary snaps (e.g. left + right half) tile without a 1px gap on odd
+// work-area sizes.
 
 func toLeft(d w32.RECT, mul, div int32) w32.RECT {
 	return w32.RECT{
@@ -28,7 +35,7 @@ func toLeft(d w32.RECT, mul, div int32) w32.RECT {
 
 func toRight(d w32.RECT, mul, div int32) w32.RECT {
 	return w32.RECT{
-		Left:   d.Left + d.Width() - d.Width()*mul/div,
+		Left:   d.Left + d.Width()*(div-mul)/div,
 		Top:    d.Top,
 		Right:  d.Left + d.Width(),
 		Bottom: d.Top + d.Height()}
@@ -45,7 +52,7 @@ func toTop(d w32.RECT, mul, div int32) w32.RECT {
 func toBottom(d w32.RECT, mul, div int32) w32.RECT {
 	return w32.RECT{
 		Left:   d.Left,
-		Top:    d.Top + d.Height() - d.Height()*mul/div,
+		Top:    d.Top + d.Height()*(div-mul)/div,
 		Right:  d.Left + d.Width(),
 		Bottom: d.Top + d.Height()}
 }

@@ -14,6 +14,8 @@
 
 // Modified by hsjeong on 2026-02-09
 // Changes: Added unit tests for snap functions
+// Modified by hsjeong on 2026-11-08
+// Changes: Removed tests for deleted thirds/size functions
 
 package main
 
@@ -95,51 +97,6 @@ func TestBottomRightHalf(t *testing.T) {
 	}
 }
 
-func TestLeftOneThirds(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	got := leftOneThirds(display, w32.RECT{})
-	want := w32.RECT{Left: 0, Top: 0, Right: 640, Bottom: 1080}
-	if got != want {
-		t.Errorf("leftOneThirds() = %v, want %v", got, want)
-	}
-}
-
-func TestCenterThird(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	got := centerThird(display, w32.RECT{})
-	want := w32.RECT{Left: 640, Top: 0, Right: 1280, Bottom: 1080}
-	if got != want {
-		t.Errorf("centerThird() = %v, want %v", got, want)
-	}
-}
-
-func TestRightOneThirds(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	got := rightOneThirds(display, w32.RECT{})
-	want := w32.RECT{Left: 1280, Top: 0, Right: 1920, Bottom: 1080}
-	if got != want {
-		t.Errorf("rightOneThirds() = %v, want %v", got, want)
-	}
-}
-
-func TestLeftTwoThirds(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	got := leftTwoThirds(display, w32.RECT{})
-	want := w32.RECT{Left: 0, Top: 0, Right: 1280, Bottom: 1080}
-	if got != want {
-		t.Errorf("leftTwoThirds() = %v, want %v", got, want)
-	}
-}
-
-func TestRightTwoThirds(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	got := rightTwoThirds(display, w32.RECT{})
-	want := w32.RECT{Left: 640, Top: 0, Right: 1920, Bottom: 1080}
-	if got != want {
-		t.Errorf("rightTwoThirds() = %v, want %v", got, want)
-	}
-}
-
 func TestMerge(t *testing.T) {
 	horizontal := w32.RECT{Left: 0, Right: 960, Top: 0, Bottom: 1080}
 	vertical := w32.RECT{Left: 0, Right: 1920, Top: 0, Bottom: 540}
@@ -147,64 +104,6 @@ func TestMerge(t *testing.T) {
 	want := w32.RECT{Left: 0, Right: 960, Top: 0, Bottom: 540}
 	if got != want {
 		t.Errorf("merge() = %v, want %v", got, want)
-	}
-}
-
-func TestMakeSmaller(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	current := w32.RECT{Left: 100, Top: 100, Right: 1820, Bottom: 980}
-	got := makeSmaller(display, current)
-	// Should shrink by 3% of display width (1920 * 0.03 = 57.6 ≈ 57)
-	// New width: 1720 - 57*2 = 1606, centered
-	expectedWidth := current.Width() - (display.Width()*3/100)*2
-	expectedHeight := current.Height() - (display.Width()*3/100)*2
-	if got.Width() != expectedWidth {
-		t.Errorf("makeSmaller() width = %d, want %d", got.Width(), expectedWidth)
-	}
-	if got.Height() != expectedHeight {
-		t.Errorf("makeSmaller() height = %d, want %d", got.Height(), expectedHeight)
-	}
-	// Check that it's centered
-	centerX := current.Left + current.Width()/2
-	centerY := current.Top + current.Height()/2
-	gotCenterX := got.Left + got.Width()/2
-	gotCenterY := got.Top + got.Height()/2
-	if gotCenterX != centerX || gotCenterY != centerY {
-		t.Errorf("makeSmaller() not centered: got center (%d,%d), want (%d,%d)", gotCenterX, gotCenterY, centerX, centerY)
-	}
-}
-
-func TestMakeSmallerMinSize(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	current := w32.RECT{Left: 500, Top: 500, Right: 600, Bottom: 600} // 100x100 window
-	got := makeSmaller(display, current)
-	// Should not go below 100x100
-	if got.Width() < 100 || got.Height() < 100 {
-		t.Errorf("makeSmaller() went below minimum size: got %dx%d", got.Width(), got.Height())
-	}
-}
-
-func TestMakeLarger(t *testing.T) {
-	display := w32.RECT{Left: 0, Top: 0, Right: 1920, Bottom: 1080}
-	current := w32.RECT{Left: 100, Top: 100, Right: 1820, Bottom: 980}
-	got := makeLarger(display, current)
-	// Should grow by 3% of display width (1920 * 0.03 = 57.6 ≈ 57)
-	// New width: 1720 + 57*2 = 1834, centered
-	expectedWidth := current.Width() + (display.Width()*3/100)*2
-	expectedHeight := current.Height() + (display.Width()*3/100)*2
-	if got.Width() != expectedWidth {
-		t.Errorf("makeLarger() width = %d, want %d", got.Width(), expectedWidth)
-	}
-	if got.Height() != expectedHeight {
-		t.Errorf("makeLarger() height = %d, want %d", got.Height(), expectedHeight)
-	}
-	// Check that it's centered
-	centerX := current.Left + current.Width()/2
-	centerY := current.Top + current.Height()/2
-	gotCenterX := got.Left + got.Width()/2
-	gotCenterY := got.Top + got.Height()/2
-	if gotCenterX != centerX || gotCenterY != centerY {
-		t.Errorf("makeLarger() not centered: got center (%d,%d), want (%d,%d)", gotCenterX, gotCenterY, centerX, centerY)
 	}
 }
 

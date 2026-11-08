@@ -11,6 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+// Modified by hsjeong on 2026-11-08
+// Changes: Extracted window style rules into isZonableStyle (testable)
+
 package main
 
 import (
@@ -60,19 +63,9 @@ func isStandardWindow(hwnd w32.HWND) bool {
 		}
 	}
 
-	style := w32.GetWindowLong(hwnd, GWL_STYLE)
-	// a window with think frame and minimize/maximize buttons
-	if uint32(style)&w32.WS_POPUP == w32.WS_POPUP &&
-		style&w32.WS_THICKFRAME == w32.WS_THICKFRAME &&
-		style&w32.WS_MINIMIZEBOX == 0 &&
-		style&w32.WS_MAXIMIZEBOX == 0 {
-		return false
-	}
-	exStyle := w32.GetWindowLong(hwnd, GWL_EXSTYLE)
-	if uint32(style)&w32.WS_CHILD == w32.WS_CHILD ||
-		style&w32.WS_DISABLED == w32.WS_DISABLED ||
-		exStyle&w32.WS_EX_TOOLWINDOW == w32.WS_EX_TOOLWINDOW ||
-		exStyle&w32.WS_EX_NOACTIVATE == w32.WS_EX_NOACTIVATE {
+	style := uint32(w32.GetWindowLong(hwnd, GWL_STYLE))
+	exStyle := uint32(w32.GetWindowLong(hwnd, GWL_EXSTYLE))
+	if !isZonableStyle(style, exStyle) {
 		return false
 	}
 
@@ -81,6 +74,24 @@ func isStandardWindow(hwnd w32.HWND) bool {
 		return false
 	}
 	return !isSystemClassName(className)
+}
+
+// isZonableStyle applies the PowerToys FancyZones style rules.
+func isZonableStyle(style, exStyle uint32) bool {
+	// a popup with thick frame but no minimize/maximize buttons (e.g. tooltips, menus)
+	if style&w32.WS_POPUP == w32.WS_POPUP &&
+		style&w32.WS_THICKFRAME == w32.WS_THICKFRAME &&
+		style&w32.WS_MINIMIZEBOX == 0 &&
+		style&w32.WS_MAXIMIZEBOX == 0 {
+		return false
+	}
+	if style&w32.WS_CHILD == w32.WS_CHILD ||
+		style&w32.WS_DISABLED == w32.WS_DISABLED ||
+		exStyle&w32.WS_EX_TOOLWINDOW == w32.WS_EX_TOOLWINDOW ||
+		exStyle&w32.WS_EX_NOACTIVATE == w32.WS_EX_NOACTIVATE {
+		return false
+	}
+	return true
 }
 
 func isSystemClassName(className string) bool {

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by hsjeong on 2026-11-08
+// Changes: Multi-display left/right movement (fork addition); deterministic monitor sort
+
 package main
 
 import (
@@ -39,13 +42,19 @@ func getMonitorList() []MonitorInfo {
 		}
 		return true
 	})
-
-	// Sort by X position (Left coordinate)
-	sort.Slice(monitors, func(i, j int) bool {
-		return monitors[i].Work.Left < monitors[j].Work.Left
-	})
-
+	sortMonitors(monitors)
 	return monitors
+}
+
+// sortMonitors orders monitors left to right (top to bottom on ties) so the
+// order does not depend on the OS enumeration order.
+func sortMonitors(monitors []MonitorInfo) {
+	sort.SliceStable(monitors, func(i, j int) bool {
+		if monitors[i].Work.Left != monitors[j].Work.Left {
+			return monitors[i].Work.Left < monitors[j].Work.Left
+		}
+		return monitors[i].Work.Top < monitors[j].Work.Top
+	})
 }
 
 // findMonitorIndex returns the index of the monitor in the sorted list
@@ -131,57 +140,50 @@ func abs32(x int32) int32 {
 	return x
 }
 
-// multiDisplaySnap handles snap with multi-display support
-// Returns: target monitor work area, snap function to use, whether to proceed
-func multiDisplaySnap(hwnd w32.HWND, pos SnapPosition, windowRect w32.RECT) (w32.RECT, resizeFunc, bool) {
+// chooseSnapTarget is the pure decision behind multiDisplaySnap.
+// monitors must be sorted (sortMonitors); currentIdx is the index of the
+// window's monitor in it (-1 if unknown, e.g. the topology just changed).
+// allowCycle=false forces a snap on the current monitor (e.g. the window was
+// maximized, so its normal bounds say nothing about where it is shown).
+func chooseSnapTarget(pos SnapPosition, windowRect, currentWork w32.RECT, monitors []MonitorInfo, currentIdx int, allowCycle bool) (w32.RECT, resizeFunc, bool) {
 	info, exists := snapPositions[pos]
 	if !exists {
-		// Invalid SnapPosition - not configured for multi-display
 		return w32.RECT{}, nil, false
 	}
+	if !allowCycle || info.moveDirection == MoveNone || !isAtSnapPosition(windowRect, currentWork, pos) {
+		return currentWork, info.snapFunc, true
+	}
+	if currentIdx < 0 {
+		return currentWork, info.snapFunc, true
+	}
 
-	// Get current monitor
+	var target MonitorInfo
+	var ok bool
+	switch info.moveDirection {
+	case MoveLeft:
+		target, ok = getLeftMonitor(monitors, currentIdx)
+	case MoveRight:
+		target, ok = getRightMonitor(monitors, currentIdx)
+	}
+	if !ok {
+		return currentWork, info.snapFunc, false // single monitor: already there
+	}
+	return target.Work, snapPositions[info.edgeAligned].snapFunc, true
+}
+
+// multiDisplaySnap handles snap with multi-display support
+// Returns: target monitor work area, snap function to use, whether to proceed
+func multiDisplaySnap(hwnd w32.HWND, pos SnapPosition, windowRect w32.RECT, allowCycle bool) (w32.RECT, resizeFunc, bool) {
 	currentMon := w32.MonitorFromWindow(hwnd, w32.MONITOR_DEFAULTTONEAREST)
 	var monInfo w32.MONITORINFO
 	if !w32.GetMonitorInfo(currentMon, &monInfo) {
-		// Failed to get monitor info - abort to prevent unexpected behavior
 		return w32.RECT{}, nil, false
 	}
-
-	// If no multi-display movement, just snap on current monitor
-	if info.moveDirection == MoveNone {
-		return monInfo.RcWork, info.snapFunc, true
+	var monitors []MonitorInfo
+	idx := -1
+	if allowCycle && isAtSnapPosition(windowRect, monInfo.RcWork, pos) {
+		monitors = getMonitorList()
+		idx = findMonitorIndex(monitors, currentMon)
 	}
-
-	// Check if already at this snap position
-	if !isAtSnapPosition(windowRect, monInfo.RcWork, pos) {
-		// Not at position yet, snap on current monitor
-		return monInfo.RcWork, info.snapFunc, true
-	}
-
-	// Already at position, try to move to adjacent monitor
-	monitors := getMonitorList()
-	currentIdx := findMonitorIndex(monitors, currentMon)
-	if currentIdx < 0 {
-		return monInfo.RcWork, info.snapFunc, true
-	}
-
-	var targetMon MonitorInfo
-	var ok bool
-
-	switch info.moveDirection {
-	case MoveLeft:
-		targetMon, ok = getLeftMonitor(monitors, currentIdx)
-	case MoveRight:
-		targetMon, ok = getRightMonitor(monitors, currentIdx)
-	}
-
-	if !ok {
-		// Single monitor, no movement
-		return monInfo.RcWork, info.snapFunc, false
-	}
-
-	// Move to target monitor with edge-aligned position
-	edgeInfo := snapPositions[info.edgeAligned]
-	return targetMon.Work, edgeInfo.snapFunc, true
+	return chooseSnapTarget(pos, windowRect, monInfo.RcWork, monitors, idx, allowCycle)
 }

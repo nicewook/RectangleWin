@@ -1,11 +1,11 @@
 module github.com/ahmetb/RectangleWin
 
-go 1.25
+go 1.27
 
 require (
-	fyne.io/systray v1.12.0
+	fyne.io/systray v1.12.2
 	github.com/gonutz/w32/v2 v2.12.1
-	golang.org/x/sys v0.40.0
+	golang.org/x/sys v0.49.0
 )
 
 require github.com/godbus/dbus/v5 v5.1.0 // indirect

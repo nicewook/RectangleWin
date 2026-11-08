@@ -14,6 +14,8 @@
 
 // Modified by hsjeong on 2026-02-09
 // Changes: Added Windows 10+ DPI awareness context support with graceful fallback
+// Modified by hsjeong on 2026-11-08
+// Changes: GetDpiForWindow checks API availability (Windows 10 1607+) instead of panicking
 
 package w32ex
 
@@ -45,8 +47,14 @@ func RegisterHotKey(hwnd w32.HWND, id, mod, vk int) bool {
 	return r1 != 0
 }
 
+// GetDpiForWindow returns the DPI of the window, or 0 if unavailable
+// (invalid window, or Windows older than 10 1607).
 func GetDpiForWindow(hwnd w32.HWND) int32 {
-	r1, _, _ := user32.NewProc("GetDpiForWindow").Call(uintptr(hwnd))
+	proc := user32.NewProc("GetDpiForWindow")
+	if proc.Find() != nil {
+		return 0
+	}
+	r1, _, _ := proc.Call(uintptr(hwnd))
 	return int32(r1)
 }
 

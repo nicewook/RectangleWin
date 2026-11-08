@@ -6,8 +6,11 @@ Windows용 핫키 기반 윈도우 스냅 및 리사이징 유틸리티. macOS R
 
 ```
 RectangleWin/
-├── main.go          # 진입점, 핫키 등록 및 리사이징 로직
-├── snap.go          # 윈도우 스냅 함수들 (half, thirds, corners)
+├── main.go          # 진입점, 핫키 등록, 스냅/최대화/복원 로직
+├── snap.go          # 스냅 레이아웃 함수 (halves, corners)
+├── multimon.go      # 좌/우 반복 시 인접 모니터로 이동
+├── windowstate.go   # 복원용 창 상태(WINDOWPLACEMENT) 저장
+├── logging.go       # GUI 실행 시 파일 로그 (%LOCALAPPDATA%\RectangleWin)
 ├── hotkey.go        # 핫키 등록 및 메시지 루프
 ├── tray.go          # 시스템 트레이 아이콘 관리
 ├── autorun.go       # Windows 시작프로그램 등록 (레지스트리)
@@ -21,7 +24,7 @@ RectangleWin/
 
 ## 기술 스택
 
-- **언어**: Go 1.25+
+- **언어**: Go 1.27+
 - **타겟 OS**: Windows only
 - **주요 의존성**:
   - `fyne.io/systray` - 시스템 트레이
@@ -40,18 +43,23 @@ GOOS=windows go build -ldflags -H=windowsgui .
 
 ## 주요 기능
 
-- **가장자리 스냅**: Win+Alt+방향키 → 1/2, 2/3, 1/3 순환
-- **코너 스냅**: Win+Ctrl+Alt+방향키
-- **중앙 배치**: Win+Alt+C
-- **최대화**: Win+Shift+F
-- **Always On Top**: Win+Alt+A
+모든 단축키는 Ctrl+Alt 조합이며 MOD_NOREPEAT로 등록한다.
+
+- **절반 스냅**: Ctrl+Alt+←/→/↑/↓ (←/→는 이미 그 위치면 인접 모니터로 이동)
+- **코너 스냅**: Ctrl+Alt+U/I/J/K
+- **중앙 배치(75%)**: Ctrl+Alt+C
+- **최대화 토글**: Ctrl+Alt+Enter
+- **복원**: Ctrl+Alt+Backspace (첫 스냅 전 상태로)
+- thirds·크기 조절·Always On Top은 미구현
 
 ## 코드 컨벤션
 
 - Windows API 호출은 주로 `github.com/gonutz/w32/v2` 사용
 - 추가 API가 필요하면 `w32ex/` 패키지에 추가
 - 메인 스레드 고정 필수 (`runtime.LockOSThread()`)
-- DPI 인식 처리 필수 (`SetProcessDPIAware`)
+- DPI 인식 처리 필수 (`SetProcessDPIAware` → Per-Monitor v2). PMv2에서는 GetWindowRect·DWM 프레임이 모두 물리 픽셀이므로 **좌표에 DPI 배율을 곱하지 말 것**
+- `syscall.NewCallback`은 호출마다 만들지 말 것 (약 2000개 한도에서 프로세스 종료)
+- 테스트: `go vet ./... && go test ./...` (Windows에서). 좌표 계산은 순수 함수로 두고 `logic_test.go`·`behavior_test.go`에 표 테스트 추가. 실제 창을 쓰는 통합 테스트는 `win32_integration_test.go` (`RECTANGLEWIN_SKIP_WIN32=1`로 생략)
 
 ## 개발 시 주의사항
 

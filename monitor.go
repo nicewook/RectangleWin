@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modified by hsjeong on 2026-11-08
+// Changes: Create the EnumDisplayMonitors callback once (fixes callback-limit crash)
+
 package main
 
 import (
@@ -22,14 +25,25 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// enumMonitorsFn is the visitor for the in-flight EnumMonitors call.
+// All callers run on the locked main (message loop) thread, so a single
+// package-level slot is sufficient.
+var enumMonitorsFn func(w32.HMONITOR) bool
+
+// enumMonitorsCallback is created exactly once. syscall.NewCallback never
+// frees its trampolines and the runtime aborts the process after ~2000 of
+// them, so creating one per EnumMonitors call eventually crashed RectangleWin.
+var enumMonitorsCallback = syscall.NewCallback(func(h, _, _, _ uintptr) uintptr {
+	if enumMonitorsFn != nil && enumMonitorsFn(w32.HMONITOR(h)) {
+		return 1
+	}
+	return 0
+})
+
 func EnumMonitors(f func(d w32.HMONITOR) bool) bool {
-	callback := syscall.NewCallback(func(h, _, _, _ uintptr) uintptr {
-		if f(w32.HMONITOR(h)) {
-			return 1
-		}
-		return 0
-	})
-	return w32.EnumDisplayMonitors(0, nil, callback, 0)
+	enumMonitorsFn = f
+	defer func() { enumMonitorsFn = nil }()
+	return w32.EnumDisplayMonitors(0, nil, enumMonitorsCallback, 0)
 }
 
 func printMonitors() {
