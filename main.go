@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // TODO make it possible to "go generate" on Windows (https://github.com/josephspurrier/goversioninfo/issues/52).
-//go:generate /bin/bash -c "go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0 -arm -64 -icon=assets/icon.ico - <<< '{}'"
+//go:generate /bin/bash -c "go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0 -platform-specific -icon=assets/icon.ico - <<< '{}'"
 
 package main
 
